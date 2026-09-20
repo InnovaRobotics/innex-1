@@ -1,0 +1,2 @@
+# Vendored skill contains a deliberate "bad example" of a hardcoded key.
+skills/robotics-security/SKILL.md:generic-api-key:358

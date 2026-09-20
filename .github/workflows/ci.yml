@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Lint (pre-commit)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: pre-commit/action@v3.0.1
+
+  # Placeholder until the first ROS 2 package exists. It builds nothing, but it
+  # proves the dev image and the workspace layout on both architectures.
+  workspace:
+    name: Workspace smoke (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    container:
+      image: ros:humble-ros-base-jammy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (if any packages)
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          if [ -d src ] && [ -n "$(find src -name package.xml -print -quit)" ]; then
+            apt-get update && rosdep update --rosdistro humble
+            rosdep install --from-paths src --ignore-src -y
+            colcon build --event-handlers console_direct+
+            colcon test && colcon test-result --verbose
+          else
+            echo "No ROS 2 packages yet; ros2 doctor only."
+            ros2 doctor --report | head -40
+          fi

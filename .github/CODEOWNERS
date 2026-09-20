@@ -1,0 +1,7 @@
+# Default owner for everything. Add the second owner when they join the org.
+* @KJdotIO
+
+# Safety-relevant paths need explicit review.
+/firmware/ @KJdotIO
+/contracts/ @KJdotIO
+/.github/ @KJdotIO

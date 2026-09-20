@@ -1,0 +1,23 @@
+item,part,qty,location,state,notes,source
+Compute,NVIDIA Jetson Orin Nano Super Developer Kit 8 GB,1,rover,working,JetPack 6.x version TBC,team
+Microcontroller,Teensy 4.1,1,rover,working,USB serial to Jetson; firmware 2026 in old repo,team
+Microcontroller,Teensy 4.1,1,bench,to buy,second unit for the desk bench,recommendation
+Drive motor,Gimson GR-WM4-V3 24 V worm gear with encoder,4,rover,working,40% duty at rated load; 13 A gearbox limit,2026 datasheet
+Drive controller,Sabertooth 2x32,2,rover,working,packet serial 9600 addr 128,2026 datasheet
+Actuator driver,Cytron MDD10A,2,rover,working,PWM+DIR; no position feedback,2026 datasheet
+Linear actuator,Tru Components 50 mm,2,rover,working,board #1,2026 datasheet
+Linear actuator,DCHouse 250 mm,2,rover,working,board #2 via 12 V buck; deposition doors,2026 session notes
+Excavation motor,57BLR50 BLDC,1,rover,working,,2026 datasheet
+BLDC driver,STEPPERONLINE BLD-510B,1,rover,working,EN polarity depends on version,2026 datasheet
+Camera,Luxonis OAK-D Pro,2,rover,working,on-device H.264 encoder; IR projector,team
+LiDAR,Ouster OS1-128,1,rover,working,firmware TBC; sponsored,team
+Router,GL.iNet GL-A1300,1,rover,working,OpenWrt; Wi-Fi 5,team
+Battery,Turnigy 6S 8000 mAh LiPo,1,rover,check,motive rail,2026 CDR
+Battery,Turnigy 4S 5000 mAh LiPo,1,rover,check,compute rail,2026 CDR
+Power meter,COTS DC energy logger,1,rover,check,must sit between battery and E-stop,rulebook
+E-stop,COTS red mushroom >= 40 mm,1,rover,working,passed inspection 2026,team
+Controller,Xbox controller (wired),1,laptop,check,plus a spare,recommendation
+Storage,NVMe SSD for Jetson,1,rover,to buy,bag capture,recommendation
+Bench,Bench PSU 24 V,1,bench,to buy,,recommendation
+Sensor,Limit switches,8,rover,to buy,door open/closed; tip up/down; ladder up/clear,recommendation
+Sensor,INA226/INA228 current sensor breakout,4,rover,to buy,ladder + drive channels,recommendation
