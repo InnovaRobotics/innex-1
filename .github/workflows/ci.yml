@@ -53,5 +53,6 @@ jobs:
             colcon test && colcon test-result --verbose
           else
             echo "No ROS 2 packages yet; ros2 doctor only."
-            ros2 doctor --report | head -40
+            ros2 doctor --report > /tmp/ros2_doctor.txt
+            head -40 /tmp/ros2_doctor.txt
           fi
