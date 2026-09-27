@@ -1,0 +1,35 @@
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+.pytest_cache/
+
+# PlatformIO
+.pio/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+
+# Local environment
+.env
+.envrc
+
+# Data: bags and evidence live in OneDrive, never in git
+bags/
+*.mcap
+*.db3
+*.bag
+
+# Generated
+*.gv
+*.pdf
+!docs/**/*.pdf
