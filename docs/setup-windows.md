@@ -1,6 +1,6 @@
 # Set up a Windows PC for development
 
-This guide installs Ubuntu 22.04, ROS 2 Humble, and Gazebo Fortress in Windows Subsystem for Linux (WSL), and Foxglove on Windows.
+This guide installs Ubuntu 24.04, ROS 2 Jazzy, and Gazebo Harmonic in Windows Subsystem for Linux (WSL), and Foxglove on Windows.
 
 ## Before you begin
 
@@ -24,10 +24,10 @@ WSL uses up to half of your RAM and all of your CPU cores by default. You don't 
 ## 1. Install WSL and Ubuntu
 
 1. Right-click **Start** and click **Terminal (Admin)**. On Windows 10, click **Windows PowerShell (Admin)**.
-2. Install WSL and Ubuntu 22.04:
+2. Install WSL and Ubuntu 24.04:
 
     ```
-    wsl --install -d Ubuntu-22.04
+    wsl --install -d Ubuntu-24.04
     ```
 
 3. If Windows asks you to restart, restart, and then run the command again.
@@ -38,19 +38,19 @@ WSL uses up to half of your RAM and all of your CPU cores by default. You don't 
     wsl -l -v
     ```
 
-    The `VERSION` column for `Ubuntu-22.04` shows `2`.
+    The `VERSION` column for `Ubuntu-24.04` shows `2`.
 
 If WSL was already installed, run `wsl --update` before step 2.
 
 ## 2. Open Ubuntu
 
-To open an Ubuntu terminal, open **Terminal**, click the down arrow next to the tab, and click **Ubuntu 22.04 LTS**.
+To open an Ubuntu terminal, open **Terminal**, click the down arrow next to the tab, and click **Ubuntu 24.04 LTS**.
 
 Run all remaining commands in an Ubuntu terminal unless a step says otherwise.
 
 We recommend that you edit code in VS Code with the WSL extension. To open a folder in VS Code from Ubuntu, run `code .` in that folder.
 
-## 3. Install ROS 2 Humble
+## 3. Install ROS 2 Jazzy
 
 1. Update Ubuntu:
 
@@ -64,7 +64,7 @@ We recommend that you edit code in VS Code with the WSL extension. To open a fol
     sudo apt install -y software-properties-common curl
     sudo add-apt-repository -y universe
     export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
-    curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.jammy_all.deb"
+    curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.noble_all.deb"
     sudo dpkg -i /tmp/ros2-apt-source.deb
     sudo apt update
     ```
@@ -72,18 +72,18 @@ We recommend that you edit code in VS Code with the WSL extension. To open a fol
 3. Install ROS 2, the build tools, Gazebo, and the Foxglove bridge:
 
     ```
-    sudo apt install -y ros-humble-desktop ros-dev-tools ros-humble-ros-gz ros-humble-foxglove-bridge
+    sudo apt install -y ros-jazzy-desktop ros-dev-tools ros-jazzy-ros-gz ros-jazzy-foxglove-bridge
     ```
 
 4. Load ROS 2 and turn on software rendering in every new terminal:
 
     ```
-    echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+    echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
     echo "export LIBGL_ALWAYS_SOFTWARE=1" >> ~/.bashrc
     source ~/.bashrc
     ```
 
-Gazebo Fortress crashes on the WSL graphics driver. `LIBGL_ALWAYS_SOFTWARE=1` makes Gazebo and RViz render on the CPU.
+Gazebo can crash or show a black window on the WSL graphics driver. `LIBGL_ALWAYS_SOFTWARE=1` makes Gazebo and RViz render on the CPU.
 
 ## 4. Test ROS 2 and Gazebo
 
@@ -105,14 +105,12 @@ Gazebo Fortress crashes on the WSL graphics driver. `LIBGL_ALWAYS_SOFTWARE=1` ma
 4. Start Gazebo:
 
     ```
-    ign gazebo shapes.sdf
+    gz sim shapes.sdf
     ```
 
     A window opens on your Windows desktop with four shapes. Drag in the window to rotate the view.
 
 5. Close Gazebo.
-
-Gazebo Fortress uses the `ign` command. Commands that start with `gz` are for newer Gazebo versions.
 
 ## 5. Install Foxglove
 
