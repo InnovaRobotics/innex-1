@@ -38,5 +38,6 @@ During a run:
 ## Always
 
 - Open a pull request. Don't push to `main`.
+- Follow `CONTRIBUTING.md` for branches, pull requests and commit messages.
 - Ask before destructive actions: wiping storage, force pushing, deleting branches or files.
 - Don't commit credentials, or put them in Discord or prompts.
