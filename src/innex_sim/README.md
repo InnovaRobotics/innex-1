@@ -52,13 +52,27 @@ The walls are simulation geometry only. The rules forbid using them for mapping,
 
 ## Regenerate the meshes
 
-The terrain and rock meshes come from a script that uses only the Python standard library. It uses fixed seeds, so each run writes identical files.
+The terrain and rock meshes are not in git. `colcon build` runs `scripts/generate_assets.py`, which uses only the Python standard library, and writes them to the build directory. The install step then copies them to `share/innex_sim/models`. The script uses fixed seeds, so each run writes identical files.
+
+To change the craters or rocks, edit the lists in the script and rebuild.
+
+To inspect the meshes, run the script with an output directory:
 
 ```bash
-python3 src/innex_sim/scripts/generate_assets.py
+python3 src/innex_sim/scripts/generate_assets.py --output-dir /tmp/innex_models
 ```
 
-Edit the crater list or rock sizes in the script, then run it and commit the new `.obj` files.
+## Open the GUI from an SSH or Zed terminal
+
+These terminals have no display. Set these variables first, then launch. The window opens on the VM desktop (the UTM window).
+
+```bash
+export DISPLAY=:0
+export XAUTHORITY=$(ls /run/user/1000/.mutter-Xwaylandauth.* | head -1)
+ros2 launch innex_sim moon_yard.launch.py
+```
+
+You can also run the launch from a terminal on the VM desktop.
 
 ## Test
 

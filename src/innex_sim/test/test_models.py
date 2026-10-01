@@ -13,24 +13,24 @@ def referenced_models(world):
 
 
 @pytest.mark.parametrize('world', WORLDS)
-def test_world_models_exist(world):
+def test_world_models_exist(world, models_dir):
     names = referenced_models(world)
     assert names
     for name in names:
-        assert (MODELS_DIR / name / 'model.config').is_file(), name
-        assert (MODELS_DIR / name / 'model.sdf').is_file(), name
+        assert (models_dir / name / 'model.config').is_file(), name
+        assert (models_dir / name / 'model.sdf').is_file(), name
 
 
-@pytest.mark.parametrize('model_dir', sorted(p for p in MODELS_DIR.iterdir() if p.is_dir()),
-                         ids=lambda p: p.name)
-def test_model_asset_uris_resolve(model_dir):
+@pytest.mark.parametrize('name', sorted(p.name for p in MODELS_DIR.iterdir() if p.is_dir()))
+def test_model_asset_uris_resolve(name, models_dir):
+    model_dir = models_dir / name
     root = ET.parse(model_dir / 'model.sdf').getroot()
     checked = 0
     for tag in ('uri', 'albedo_map'):
         for element in root.iter(tag):
             uri = element.text.strip()
             if uri.startswith('model://'):
-                target = MODELS_DIR / uri[len('model://'):]
+                target = models_dir / uri[len('model://'):]
             else:
                 target = model_dir / uri
             assert target.is_file(), f'{uri} -> {target}'

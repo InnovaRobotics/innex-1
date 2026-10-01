@@ -4,8 +4,8 @@
 Uses the standard library only. The output is deterministic: running the
 script twice writes byte-identical files.
 
-Usage: generate_assets.py [--output-dir DIR]
-DIR defaults to the package ``models`` directory.
+Usage: generate_assets.py --output-dir DIR
+The meshes are written to DIR/<model name>/meshes/.
 """
 
 import argparse
@@ -195,9 +195,8 @@ def generate(output_dir):
 
 
 def main():
-    default = Path(__file__).resolve().parent.parent / 'models'
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('--output-dir', default=str(default))
+    parser.add_argument('--output-dir', required=True)
     args = parser.parse_args()
     generate(args.output_dir)
 

@@ -3,23 +3,23 @@ import subprocess
 
 import pytest
 
-from helpers import (ARENA_X, ARENA_Y, MODELS_DIR, START_ZONE, WORLDS, WORLDS_DIR,
+from helpers import (ARENA_X, ARENA_Y, START_ZONE, WORLDS, WORLDS_DIR,
                      circle_rect_distance, rock_includes)
 
 ROCK_RADIUS = 0.2
 
 
-def gz_env():
+def gz_env(models_dir):
     env = dict(os.environ)
-    env['GZ_SIM_RESOURCE_PATH'] = str(MODELS_DIR)
-    env['SDF_PATH'] = str(MODELS_DIR)
+    env['GZ_SIM_RESOURCE_PATH'] = str(models_dir)
+    env['SDF_PATH'] = str(models_dir)
     return env
 
 
 @pytest.mark.parametrize('world', WORLDS)
-def test_gz_sdf_check(world):
+def test_gz_sdf_check(world, models_dir):
     result = subprocess.run(['gz', 'sdf', '-k', str(WORLDS_DIR / f'{world}.sdf')],
-                            env=gz_env(), capture_output=True, text=True, timeout=60)
+                            env=gz_env(models_dir), capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'Valid' in result.stdout
 
@@ -36,8 +36,8 @@ def test_rock_layout(world):
 
 
 @pytest.mark.parametrize('world', WORLDS)
-def test_headless_smoke(world):
+def test_headless_smoke(world, models_dir):
     result = subprocess.run(
         ['gz', 'sim', '-s', '-r', '--iterations', '1000', str(WORLDS_DIR / f'{world}.sdf')],
-        env=gz_env(), capture_output=True, text=True, timeout=90)
+        env=gz_env(models_dir), capture_output=True, text=True, timeout=90)
     assert result.returncode == 0, result.stdout + result.stderr
