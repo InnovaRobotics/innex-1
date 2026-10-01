@@ -139,7 +139,6 @@
       </link>
     </model>
 
-    <!-- Zone markers: visual only, no collision. -->
     <model name="zone_markers">
       <static>true</static>
       <link name="link">

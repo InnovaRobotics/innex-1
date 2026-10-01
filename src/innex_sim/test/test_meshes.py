@@ -1,84 +1,54 @@
-import subprocess
-import sys
-from collections import defaultdict
-
 import pytest
 
-from helpers import ARENA_X, ARENA_Y, PACKAGE_DIR, START_ZONE, read_obj
+from helpers import (ARENA_LENGTH, ARENA_WIDTH, CRATER_COUNT, CRATER_DEPTH_THRESHOLD,
+                     MAX_CRATER_DEPTH, MAX_CRATER_WIDTH, MAX_ROCK_SIZE, MAX_ROCK_TRIANGLES,
+                     MAX_TERRAIN_TRIANGLES, MIN_ROCK_SIZE, OBJ_PRECISION, START_ZONE,
+                     depressed_regions, read_obj, run_generator)
 
 ROCKS = ('rock_a', 'rock_b', 'rock_c', 'rock_d')
-GENERATED = [f'{r}/meshes/rock.obj' for r in ROCKS] + ['moon_yard_terrain/meshes/terrain.obj']
-DEPRESSION = -0.005
+TERRAIN = 'moon_yard_terrain/meshes/terrain.obj'
+GENERATED = [f'{rock}/meshes/rock.obj' for rock in ROCKS] + [TERRAIN]
 
 
 @pytest.mark.parametrize('rock', ROCKS)
 def test_rock_mesh_limits(rock, models_dir):
     vertices, faces = read_obj(models_dir / rock / 'meshes' / 'rock.obj')
     xs, ys, zs = zip(*vertices)
-    assert 0.30 <= max(max(xs) - min(xs), max(ys) - min(ys)) <= 0.40 + 1e-5
-    assert max(zs) <= 0.40
-    assert min(zs) == pytest.approx(0.0, abs=1e-3)
-    assert len(faces) <= 500
+    size = max(max(xs) - min(xs), max(ys) - min(ys))
+    assert MIN_ROCK_SIZE - OBJ_PRECISION <= size <= MAX_ROCK_SIZE + OBJ_PRECISION
+    assert max(zs) <= MAX_ROCK_SIZE
+    assert min(zs) == pytest.approx(0.0, abs=OBJ_PRECISION)
+    assert len(faces) <= MAX_ROCK_TRIANGLES
 
 
 def test_terrain_mesh_limits(models_dir):
-    vertices, faces = read_obj(models_dir / 'moon_yard_terrain' / 'meshes' / 'terrain.obj')
+    vertices, faces = read_obj(models_dir / TERRAIN)
     xs, ys, zs = zip(*vertices)
-    assert min(xs) == pytest.approx(0.0, abs=1e-6)
-    assert max(xs) == pytest.approx(ARENA_X, abs=1e-6)
-    assert min(ys) == pytest.approx(0.0, abs=1e-6)
-    assert max(ys) == pytest.approx(ARENA_Y, abs=1e-6)
+    assert min(xs) == pytest.approx(0.0, abs=OBJ_PRECISION)
+    assert max(xs) == pytest.approx(ARENA_LENGTH, abs=OBJ_PRECISION)
+    assert min(ys) == pytest.approx(0.0, abs=OBJ_PRECISION)
+    assert max(ys) == pytest.approx(ARENA_WIDTH, abs=OBJ_PRECISION)
     assert max(zs) == 0.0
-    assert min(zs) >= -0.5
-    assert len(faces) <= 40000
+    assert min(zs) >= -MAX_CRATER_DEPTH
+    assert len(faces) <= MAX_TERRAIN_TRIANGLES
 
 
-def test_terrain_depressions_are_small_and_clear_of_start_zone(models_dir):
-    vertices, faces = read_obj(models_dir / 'moon_yard_terrain' / 'meshes' / 'terrain.obj')
-    deep = {i for i, v in enumerate(vertices) if v[2] < DEPRESSION}
-    assert deep
-
-    neighbours = defaultdict(set)
-    for face in faces:
-        for a in face:
-            for b in face:
-                if a != b and a in deep and b in deep:
-                    neighbours[a].add(b)
-
-    seen = set()
-    regions = 0
-    for start in sorted(deep):
-        if start in seen:
-            continue
-        regions += 1
-        stack = [start]
-        seen.add(start)
-        region = []
-        while stack:
-            node = stack.pop()
-            region.append(node)
-            for other in neighbours[node]:
-                if other not in seen:
-                    seen.add(other)
-                    stack.append(other)
+def test_terrain_craters_are_small_and_clear_of_start_zone(models_dir):
+    vertices, faces = read_obj(models_dir / TERRAIN)
+    regions = depressed_regions(vertices, faces, CRATER_DEPTH_THRESHOLD)
+    assert len(regions) == CRATER_COUNT
+    for region in regions:
         xs = [vertices[i][0] for i in region]
         ys = [vertices[i][1] for i in region]
-        assert max(xs) - min(xs) <= 0.50
-        assert max(ys) - min(ys) <= 0.50
-        x_min, x_max, y_min, y_max = START_ZONE
-        overlaps = max(xs) >= x_min and min(xs) <= x_max and max(ys) >= y_min and min(ys) <= y_max
-        assert not overlaps
-    assert regions == 3
+        assert max(xs) - min(xs) <= MAX_CRATER_WIDTH
+        assert max(ys) - min(ys) <= MAX_CRATER_WIDTH
+        overlaps_start_zone = (max(xs) >= START_ZONE.x_min and min(xs) <= START_ZONE.x_max
+                               and max(ys) >= START_ZONE.y_min and min(ys) <= START_ZONE.y_max)
+        assert not overlaps_start_zone
 
 
 def test_generator_is_deterministic(tmp_path):
-    outputs = []
-    for run in ('first', 'second'):
-        output = tmp_path / run
-        subprocess.run(
-            [sys.executable, str(PACKAGE_DIR / 'scripts' / 'generate_assets.py'),
-             '--output-dir', str(output)],
-            check=True, timeout=60)
-        outputs.append(output)
+    run_generator(tmp_path / 'first')
+    run_generator(tmp_path / 'second')
     for relative in GENERATED:
-        assert (outputs[0] / relative).read_bytes() == (outputs[1] / relative).read_bytes(), relative
+        assert (tmp_path / 'first' / relative).read_bytes() == (tmp_path / 'second' / relative).read_bytes()

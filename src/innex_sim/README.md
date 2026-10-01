@@ -2,12 +2,11 @@
 
 Gazebo Harmonic worlds for the INNEX-1 rover, based on the Lunabotics arena. The package has no rover model yet.
 
-## Worlds
+## World
 
-- `moon_yard`: terrain mesh with three craters, nine rocks, walls, zone markers and the AprilTag beacon.
-- `moon_yard_flat`: the same layout on a flat plane, without craters.
+`moon_yard` has a terrain mesh with three craters, nine rocks, walls, zone markers and the AprilTag beacon.
 
-Both worlds use the `gz-sim-physics-system`, sensors (ogre2) and IMU systems, so a rover can be added later.
+The world uses the `gz-sim-physics-system`, sensors (ogre2) and IMU systems, so a rover can be added later.
 
 ## Launch
 
@@ -15,13 +14,12 @@ Build and source the workspace, then run one of these commands.
 
 ```bash
 ros2 launch innex_sim moon_yard.launch.py
-ros2 launch innex_sim moon_yard.launch.py world:=moon_yard_flat
 ros2 launch innex_sim moon_yard.launch.py gui:=false
 ```
 
 The launch file also starts a `ros_gz_bridge` for `/clock`.
 
-To run a world without ROS, source the workspace so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
+To run the world without ROS, source the workspace so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
 
 ## Arena frame
 

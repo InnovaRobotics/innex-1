@@ -3,18 +3,13 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from helpers import MODELS_DIR, WORLDS, WORLDS_DIR
+from helpers import MODELS_DIR, WORLD
 
 MODEL_URI = re.compile(r'model://([A-Za-z0-9_]+)')
 
 
-def referenced_models(world):
-    return sorted(set(MODEL_URI.findall((WORLDS_DIR / f'{world}.sdf').read_text())))
-
-
-@pytest.mark.parametrize('world', WORLDS)
-def test_world_models_exist(world, models_dir):
-    names = referenced_models(world)
+def test_world_models_exist(models_dir):
+    names = sorted(set(MODEL_URI.findall(WORLD.read_text())))
     assert names
     for name in names:
         assert (models_dir / name / 'model.config').is_file(), name
@@ -35,4 +30,4 @@ def test_model_asset_uris_resolve(name, models_dir):
                 target = model_dir / uri
             assert target.is_file(), f'{uri} -> {target}'
             checked += 1
-    assert checked > 0 or model_dir.name == 'apriltag_beacon'
+    assert checked > 0

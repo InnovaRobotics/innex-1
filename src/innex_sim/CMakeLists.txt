@@ -5,6 +5,7 @@ find_package(ament_cmake REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 set(MESH_DIR ${CMAKE_CURRENT_BINARY_DIR}/models)
+# List the generated files so CMake knows when to rerun the script.
 set(MESH_OUTPUTS
   ${MESH_DIR}/moon_yard_terrain/meshes/terrain.obj
   ${MESH_DIR}/rock_a/meshes/rock.obj
