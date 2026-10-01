@@ -1,0 +1,71 @@
+# innex_sim
+
+Gazebo Harmonic worlds for the INNEX-1 rover, based on the Lunabotics arena. The package has no rover model yet.
+
+## Worlds
+
+- `moon_yard`: terrain mesh with three craters, nine rocks, walls, zone markers and the AprilTag beacon.
+- `moon_yard_flat`: the same layout on a flat plane, without craters.
+
+Both worlds use the `gz-sim-physics-system`, sensors (ogre2) and IMU systems, so a rover can be added later.
+
+## Launch
+
+Build and source the workspace, then run one of these commands.
+
+```bash
+ros2 launch innex_sim moon_yard.launch.py
+ros2 launch innex_sim moon_yard.launch.py world:=moon_yard_flat
+ros2 launch innex_sim moon_yard.launch.py gui:=false
+```
+
+The launch file also starts a `ros_gz_bridge` for `/clock`.
+
+To run a world without ROS, source the workspace so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
+
+## Arena frame
+
+The origin is the south-west interior corner of the arena, at the sand surface. The x axis points east along the 7.9 m length. The y axis points north along the 4.4 m width. The z axis points up. The arena interior covers x 0 to 7.9 and y 0 to 4.4.
+
+This x axis matches the X axis in rulebook Figure 2. The rulebook measures Y down from the beacon corner, so `y = 4.4 - Y_rulebook`.
+
+## Zones
+
+| Zone | Centre (x, y) | Size (x by y) | Colour |
+|---|---|---|---|
+| Start | 1.0, 3.4 | 2.0 by 2.0 | green |
+| Construction | 1.3, 0.75 | 2.6 by 1.5 | blue |
+| Berm target | 1.3, 0.75 | 1.5 by 0.9 | red |
+| Excavation | 6.525, 2.2 | 2.75 by 4.4 | pink |
+
+The markers are visual only and have no collision. The obstacle zone has no marker. We assume it is the area between the start and construction zones and the excavation zone.
+
+## Rocks and craters
+
+The rock and crater positions approximate rulebook Figure 2. The judges randomise them, so treat the layout as an example. The tests keep every rock inside the arena and outside the start zone.
+
+The AprilTag beacon position and height are not confirmed with the organisers.
+
+## Walls
+
+The walls are simulation geometry only. The rules forbid using them for mapping, navigation or collision avoidance.
+
+## Regenerate the meshes
+
+The terrain and rock meshes come from a script that uses only the Python standard library. It uses fixed seeds, so each run writes identical files.
+
+```bash
+python3 src/innex_sim/scripts/generate_assets.py
+```
+
+Edit the crater list or rock sizes in the script, then run it and commit the new `.obj` files.
+
+## Test
+
+```bash
+colcon build --packages-select innex_sim
+colcon test --packages-select innex_sim
+colcon test-result --verbose
+```
+
+The tests need `gz` on the path, so source the ROS 2 Jazzy setup first.

@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="apriltag_beacon">
+    <static>true</static>
+    <link name="link">
+      <visual name="backing">
+        <pose>0 0.006 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.30 0.01 0.30</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0 0 0 1</specular>
+        </material>
+      </visual>
+      <visual name="tag">
+        <pose>0 0 0 1.5707963 0 0</pose>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>0.25 0.25</size>
+          </plane>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0 0 0 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://apriltag_beacon/materials/textures/tag36_11_00000.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
