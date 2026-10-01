@@ -2,7 +2,7 @@
 
 Vendored from <https://github.com/arpitg1304/robotics-agent-skills/tree/main/skills> at commit `f9bc5467ff9ee3d23f1a1b0b29a649843bb6ad11` (2026-08-11). Upstream licence: Apache-2.0, kept in `ROBOTICS_AGENT_SKILLS_LICENSE`.
 
-The ROS 1 skill is excluded. This is a ROS 2 Humble repository.
+The ROS 1 skill is excluded. This is a ROS 2 Jazzy repository.
 
 | Skill | Use for |
 |---|---|
@@ -15,7 +15,5 @@ The ROS 1 skill is excluded. This is a ROS 2 Humble repository.
 | `robotics-security` | SSH, router hardening, secrets, DDS security, E-stop, competition network exposure |
 | `docker-ros2-development` | Dev container, CI images, DDS in containers, device passthrough |
 | `ros2-web-integration` | Foxglove bridge, WebSockets, gamepad in browser, WebRTC/MJPEG |
-
-Project-specific skills (hardware bring-up, rulebook compliance, evidence bags, conventions) will be added under `skills/innex-*` as the corresponding contracts and runbooks exist.
 
 To refresh: clone upstream, copy the listed directories, update the commit hash above.

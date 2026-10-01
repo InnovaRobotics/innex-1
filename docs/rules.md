@@ -2,7 +2,7 @@
 
 This is a summary of the UK Lunabotics 2026 Rule Book, v1.0, dated 18 May 2026. Where this page and the rulebook differ, the rulebook is correct.
 
-The organisers publish documents at [uklunabotics.co.uk](http://uklunabotics.co.uk/). The organisers expect to release the 2027 rulebook in October 2026. When it's out, update this page.
+The organisers publish documents at [uklunabotics.co.uk](http://uklunabotics.co.uk/).
 
 ## Scoring
 
@@ -272,7 +272,7 @@ Breaking the intent of a rule counts as breaking the rule. Raise disputes with t
 - There's no internet. General Wi-Fi might be available, but bring your own mobile data.
 - A marshal takes each team and its robot to the arena.
 
-## Not yet defined in v1.0
+## Undefined in v1.0
 
 - Comms rules inside the arena: "TBD"
 - Comms between the arena and mission control: "TBD"

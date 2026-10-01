@@ -19,6 +19,12 @@ The pull request title and description become the commit on `main`.
 - Don't write titles like `Fix bug`, `Update code` or `Phase 1`.
 - After a blank line, say why you made the change. Include what a reviewer needs: the problem, test results, and links to issues.
 
+## Using AI
+
+You can use AI tools. How you use them is up to you.
+
+You're responsible for every line you submit. You must be able to explain what your code does and why it works. If you wrote tests, you must be able to explain what they check. Reviewers can ask about any line.
+
 ## Research tools
 
 Agents and people use these MCP servers. Neither needs an account.
