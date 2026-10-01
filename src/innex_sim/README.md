@@ -1,6 +1,6 @@
 # innex_sim
 
-Gazebo Harmonic worlds for the INNEX-1 rover, based on the Lunabotics arena. The package has no rover model yet.
+Gazebo Harmonic worlds for the INNEX-1 rover, based on the Lunabotics arena.
 
 ## World
 
