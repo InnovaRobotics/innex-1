@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "ms-vscode.cpptools",
+    "ranch-hand-robotics.rde-ros-2",
+    "ranch-hand-robotics.urdf-editor",
+    "redhat.vscode-yaml",
+    "redhat.vscode-xml",
+    "davidanson.vscode-markdownlint",
+    "github.vscode-pull-request-github"
+  ]
+}

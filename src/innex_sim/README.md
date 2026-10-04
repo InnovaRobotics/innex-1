@@ -60,7 +60,7 @@ To inspect the meshes, run the script with an output directory:
 python3 src/innex_sim/scripts/generate_assets.py --output-dir /tmp/innex_models
 ```
 
-## Open the GUI from an SSH or Zed terminal
+## Open the GUI from an SSH or VS Code terminal
 
 These terminals have no display. Set these variables first, then launch. The window opens on the VM desktop (the UTM window).
 
