@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<robot name="innex_1" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="innex_1" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
   <!-- Will replace with proper values when rover is measured -->
   <xacro:property name="chassis_length" value="1.000"/>
@@ -81,5 +81,7 @@
   <xacro:wheel name="front_right" x="1" y="-1"/>
   <xacro:wheel name="rear_left" x="-1" y="1"/>
   <xacro:wheel name="rear_right" x="-1" y="-1"/>
+
+  <xacro:include filename="innex_1.gazebo.xacro"/>
 
 </robot>

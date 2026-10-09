@@ -23,7 +23,7 @@ add_custom_command(
 )
 add_custom_target(innex_sim_meshes ALL DEPENDS ${MESH_OUTPUTS})
 
-install(DIRECTORY launch worlds models
+install(DIRECTORY config launch worlds models
   DESTINATION share/${PROJECT_NAME}
 )
 install(DIRECTORY ${MESH_DIR}/

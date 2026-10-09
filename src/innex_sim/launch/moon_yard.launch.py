@@ -38,7 +38,8 @@ def generate_launch_description():
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
-            arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
+            parameters=[{'config_file': os.path.join(
+                get_package_share_directory('innex_sim'), 'config', 'bridge.yaml')}],
             output='screen',
         ),
         IncludeLaunchDescription(
