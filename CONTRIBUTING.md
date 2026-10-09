@@ -23,7 +23,7 @@ The pull request title and description become the commit on `main`.
 
 You can use AI tools. How you use them is up to you.
 
-You're responsible for every line you submit. You must be able to explain what your code does and why it works. If you wrote tests, you must be able to explain what they check. Reviewers can ask about any line.
+You're responsible for every line you submit. You must be able to explain what your code does and why it works. If you write tests, you must be able to explain what they check. Reviewers can ask about any line.
 
 ## Research tools
 
@@ -34,7 +34,7 @@ Agents and people use these MCP servers. Neither needs an account.
 | Library and API docs | Context7 | `https://mcp.context7.com/mcp` |
 | Forums, issues, release notes, datasheets | Exa | `https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa` |
 
-- Name the version in every question: Jazzy, Harmonic or JetPack 7.2.1. Context7 also has docs for Humble.
+- Name the version in every question: Jazzy, Harmonic or JetPack 7.2.1.
 - Exa allows about 50 calls a day for each network address. To save calls, fetch several pages in one call.
 
 This guide follows [Google's guide to change descriptions](https://google.github.io/eng-practices/review/developer/cl-descriptions.html) and the [ROS 2 Jazzy developer guide](https://docs.ros.org/en/jazzy/The-ROS2-Project/Contributing/Developer-Guide.html).
