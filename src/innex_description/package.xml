@@ -11,6 +11,9 @@
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>xacro</exec_depend>
 
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>urdfdom</test_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>

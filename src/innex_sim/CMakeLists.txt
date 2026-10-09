@@ -37,6 +37,8 @@ if(BUILD_TESTING)
   ament_add_pytest_test(test_models test/test_models.py TIMEOUT 120)
   ament_add_pytest_test(test_worlds test/test_worlds.py TIMEOUT 300)
   ament_add_pytest_test(test_meshes test/test_meshes.py TIMEOUT 120)
+  ament_add_pytest_test(test_rover_urdf test/test_rover_urdf.py TIMEOUT 120)
+  ament_add_pytest_test(test_rover_sim test/test_rover_sim.py TIMEOUT 300)
 endif()
 
 ament_package()
