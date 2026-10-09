@@ -6,7 +6,7 @@ Gazebo Harmonic worlds for the INNEX-1 rover, based on the Lunabotics arena.
 
 `moon_yard` has a terrain mesh with three craters, nine rocks, walls, zone markers and the AprilTag beacon.
 
-The world uses the `gz-sim-physics-system`, sensors (ogre2) and IMU systems, so a rover can be added later.
+The world uses the `gz-sim-physics-system`, sensors (ogre2) and IMU systems. The launch file spawns the INNEX-1 rover from `innex_description` into the start zone.
 
 ## Launch
 
@@ -17,9 +17,35 @@ ros2 launch innex_sim moon_yard.launch.py
 ros2 launch innex_sim moon_yard.launch.py gui:=false
 ```
 
-The launch file also starts a `ros_gz_bridge` for `/clock`.
+The launch file also starts `robot_state_publisher`, spawns the rover and starts a `ros_gz_bridge` configured by `config/bridge.yaml`.
 
 To run the world without ROS, source the workspace so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
+
+## Rover
+
+The rover spawns at the centre of the start zone, facing east. Set the spawn pose with the `x`, `y` and `yaw` launch arguments. The values are in the arena frame, in metres and radians.
+
+```bash
+ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
+```
+
+The Gazebo `DiffDrive` system drives all four wheels as a skid steer. The 37 rpm drive motors limit the speed to about 0.6 m/s forward and 1.9 rad/s of commanded turn rate.
+
+To drive the rover from the keyboard, run this command in another terminal.
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p stamped:=true -p frame_id:=base_link
+```
+
+| ROS topic | Type | Direction | Description |
+|---|---|---|---|
+| `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | to Gazebo | Velocity command. The bridge keeps only the latest command. |
+| `/odom` | `nav_msgs/msg/Odometry` | from Gazebo | Wheel odometry in the `odom` frame. |
+| `/tf` | `tf2_msgs/msg/TFMessage` | from Gazebo | The `odom` to `base_link` transform. |
+| `/joint_states` | `sensor_msgs/msg/JointState` | from Gazebo | Wheel joint positions and velocities. |
+| `/clock` | `rosgraph_msgs/msg/Clock` | from Gazebo | Simulation time. |
+
+`robot_state_publisher` publishes the transforms from `base_link` to the wheels, using the simulation clock.
 
 ## Arena frame
 
