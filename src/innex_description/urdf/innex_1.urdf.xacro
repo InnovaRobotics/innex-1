@@ -47,4 +47,39 @@
     </inertial>
   </link>
 
+    <xacro:macro name="wheel" params="name x y">
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_wheel"/>
+      <origin xyz="${x * wheelbase / 2} ${y * track / 2} ${wheel_radius}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <link name="${name}_wheel">
+      <visual>
+        <origin rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="${wheel_mass * (3 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12}" ixy="0" ixz="0"
+                 iyy="${wheel_mass * wheel_radius * wheel_radius / 2}" iyz="0"
+                 izz="${wheel_mass * (3 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <xacro:wheel name="front_left" x="1" y="1"/>
+  <xacro:wheel name="front_right" x="1" y="-1"/>
+  <xacro:wheel name="rear_left" x="-1" y="1"/>
+  <xacro:wheel name="rear_right" x="-1" y="-1"/>
+
 </robot>
