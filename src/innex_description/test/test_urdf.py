@@ -42,7 +42,6 @@ def test_root_link_is_base_link(robot):
 
 def test_wheel_joints(robot):
     continuous = [joint for joint in robot.findall('joint') if joint.get('type') == 'continuous']
-    assert len(continuous) == 4
     assert {joint.get('name') for joint in continuous} == drive_joint_names(robot)
 
     links = {link.get('name'): link for link in robot.findall('link')}
@@ -50,6 +49,14 @@ def test_wheel_joints(robot):
         assert floats(joint.find('axis').get('xyz')) == [0, 1, 0], joint.get('name')
         radius = float(links[joint.find('child').get('link')].find('collision/geometry/cylinder').get('radius'))
         assert floats(joint.find('origin').get('xyz'))[2] == pytest.approx(radius), joint.get('name')
+
+
+def test_drive_limits_are_valid(robot):
+    plugin = robot.find('gazebo/plugin[@name="gz::sim::systems::DiffDrive"]')
+    for quantity in ('linear_velocity', 'angular_velocity', 'linear_acceleration', 'angular_acceleration'):
+        lower, upper = (plugin.findall(f'{bound}_{quantity}') for bound in ('min', 'max'))
+        assert len(lower) == len(upper) == 1, quantity
+        assert float(lower[0].text) < 0 < float(upper[0].text), quantity
 
 
 def test_inertials_are_physical(robot):

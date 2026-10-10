@@ -8,6 +8,9 @@ from typing import NamedTuple
 import pytest
 import rclpy
 from geometry_msgs.msg import TwistStamped
+from rclpy.executors import SingleThreadedExecutor
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformListener
 
 from helpers import START_ZONE
 
@@ -119,8 +122,23 @@ def test_joint_states_has_wheel_joints(sim):
         assert joint in names
 
 
-def test_odom_child_frame_is_base_link(sim):
-    assert 'base_link' in echo_once(sim.env, '/odom', 'child_frame_id').split()
+def test_odom_to_base_link_transform(sim):
+    context = rclpy.Context()
+    rclpy.init(context=context, domain_id=int(sim.env['ROS_DOMAIN_ID']))
+    node = rclpy.create_node('test_tf_listener', context=context)
+    executor = SingleThreadedExecutor(context=context)
+    executor.add_node(node)
+    buffer = Buffer()
+    TransformListener(buffer, node, spin_thread=False)
+    try:
+        deadline = time.monotonic() + SPAWN_TIMEOUT
+        while time.monotonic() < deadline and not buffer.can_transform('odom', 'base_link', Time()):
+            executor.spin_once(timeout_sec=0.1)
+        assert buffer.can_transform('odom', 'base_link', Time())
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown(context=context)
 
 
 def test_rover_drives_forward(sim):
