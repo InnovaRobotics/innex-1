@@ -1,9 +1,11 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
-  <xacro:property name="drive_motor_rpm" value="37"/>
-  <xacro:property name="max_speed" value="${drive_motor_rpm / 60 * 2 * pi * wheel_radius}"/>
-  <xacro:property name="max_turn_rate" value="${2 * max_speed / track}"/>
+  <xacro:property name="max_speed" value="0.4"/>
+  <xacro:property name="max_turn_rate" value="0.8"/>
+  <xacro:property name="max_acceleration" value="0.3"/>
+  <xacro:property name="max_deceleration" value="0.5"/>
+  <xacro:property name="max_angular_acceleration" value="0.6"/>
 
   <xacro:macro name="wheel_friction" params="name">
     <gazebo reference="${name}_wheel">
@@ -36,8 +38,14 @@
       <right_joint>rear_right_wheel_joint</right_joint>
       <wheel_separation>${track}</wheel_separation>
       <wheel_radius>${wheel_radius}</wheel_radius>
+      <min_linear_velocity>${-max_speed}</min_linear_velocity>
       <max_linear_velocity>${max_speed}</max_linear_velocity>
+      <min_angular_velocity>${-max_turn_rate}</min_angular_velocity>
       <max_angular_velocity>${max_turn_rate}</max_angular_velocity>
+      <min_linear_acceleration>${-max_deceleration}</min_linear_acceleration>
+      <max_linear_acceleration>${max_acceleration}</max_linear_acceleration>
+      <min_angular_acceleration>${-max_angular_acceleration}</min_angular_acceleration>
+      <max_angular_acceleration>${max_angular_acceleration}</max_angular_acceleration>
       <frame_id>odom</frame_id>
       <child_frame_id>base_link</child_frame_id>
       <odom_publish_frequency>50</odom_publish_frequency>

@@ -125,8 +125,8 @@ def test_odom_child_frame_is_base_link(sim):
 
 def test_rover_drives_forward(sim):
     start = read_pose(sim.env)
-    drive(sim.env, 0.3, 2.0)
+    drive(sim.env, 0.25, 2.5)
     time.sleep(1.5)
     end = read_pose(sim.env)
-    assert 0.4 <= end[0] - start[0] <= 0.75
+    assert 0.45 <= end[0] - start[0] <= 0.72
     assert abs(end[1] - start[1]) < 0.1

@@ -29,12 +29,12 @@ The rover spawns at the centre of the start zone, facing east. Set the spawn pos
 ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
 ```
 
-The Gazebo `DiffDrive` system drives all four wheels as a skid steer. The 37 rpm drive motors limit the speed to about 0.6 m/s forward and 1.9 rad/s of commanded turn rate.
+The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. Forward acceleration is limited to 0.3 m/s², braking and reversing to 0.5 m/s², and turning to 0.6 rad/s². These are starting values until the wheel test on blocks (INX-142) measures the real rover.
 
 To drive the rover from the keyboard, run this command in another terminal.
 
 ```bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p stamped:=true -p frame_id:=base_link
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p stamped:=true -p frame_id:=base_link -p speed:=0.25 -p turn:=0.4
 ```
 
 | ROS topic | Type | Direction | Description |
