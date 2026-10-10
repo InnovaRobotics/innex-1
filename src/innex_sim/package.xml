@@ -11,8 +11,16 @@
 
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>innex_description</exec_depend>
+  <exec_depend>teleop_twist_keyboard</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>geometry_msgs</test_depend>
+  <test_depend>rclpy</test_depend>
+  <test_depend>ros2launch</test_depend>
+  <test_depend>ros2topic</test_depend>
+  <test_depend>tf2_ros_py</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

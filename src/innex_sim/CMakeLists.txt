@@ -23,11 +23,14 @@ add_custom_command(
 )
 add_custom_target(innex_sim_meshes ALL DEPENDS ${MESH_OUTPUTS})
 
-install(DIRECTORY launch worlds models
+install(DIRECTORY config launch worlds models
   DESTINATION share/${PROJECT_NAME}
 )
 install(DIRECTORY ${MESH_DIR}/
   DESTINATION share/${PROJECT_NAME}/models
+)
+install(PROGRAMS scripts/teleop_keyboard
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/innex_sim.dsv.in")
@@ -37,6 +40,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(test_models test/test_models.py TIMEOUT 120)
   ament_add_pytest_test(test_worlds test/test_worlds.py TIMEOUT 300)
   ament_add_pytest_test(test_meshes test/test_meshes.py TIMEOUT 120)
+  ament_add_pytest_test(test_rover_sim test/test_rover_sim.py TIMEOUT 300)
 endif()
 
 ament_package()
