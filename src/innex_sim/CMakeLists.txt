@@ -29,6 +29,9 @@ install(DIRECTORY config launch worlds models
 install(DIRECTORY ${MESH_DIR}/
   DESTINATION share/${PROJECT_NAME}/models
 )
+install(PROGRAMS scripts/teleop_keyboard
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/innex_sim.dsv.in")
 

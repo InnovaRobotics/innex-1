@@ -34,8 +34,10 @@ The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits 
 To drive the rover from the keyboard, run this command in another terminal.
 
 ```bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p stamped:=true -p frame_id:=base_link -p speed:=0.25 -p turn:=0.4
+ros2 run innex_sim teleop_keyboard
 ```
+
+The defaults live in `config/teleop_keyboard.yaml`. `teleop_twist_keyboard` keeps sending the last command until you press another key, so press `k` to stop.
 
 | ROS topic | Type | Direction | Description |
 |---|---|---|---|
