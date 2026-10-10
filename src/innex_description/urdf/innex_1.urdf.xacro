@@ -16,6 +16,19 @@
   <xacro:property name="chassis_mass" value="56.0"/>
   <xacro:property name="wheel_mass" value="1.0"/>
 
+  <material name="carbon">
+    <color rgba="0.18 0.18 0.2 1"/>
+  </material>
+  <material name="tyre">
+    <color rgba="0.05 0.05 0.05 1"/>
+  </material>
+  <material name="hub">
+    <color rgba="0.7 0.7 0.72 1"/>
+  </material>
+  <material name="accent">
+    <color rgba="1.0 0.45 0.0 1"/>
+  </material>
+
   <xacro:macro name="box_inertia" params="mass x y z">
     <inertia ixx="${mass / 12 * (y * y + z * z)}" ixy="0" ixz="0"
              iyy="${mass / 12 * (x * x + z * z)}" iyz="0"
@@ -31,10 +44,18 @@
   </joint>
 
   <link name="chassis">
-    <visual>
+    <visual name="body">
       <geometry>
         <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
       </geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual name="front_plate">
+      <origin xyz="${chassis_length / 2 + 0.005} 0 0"/>
+      <geometry>
+        <box size="0.01 ${chassis_width - 0.04} 0.12"/>
+      </geometry>
+      <material name="accent"/>
     </visual>
     <collision>
       <geometry>
@@ -56,11 +77,26 @@
     </joint>
 
     <link name="${name}_wheel">
-      <visual>
+      <visual name="tyre">
         <origin rpy="${pi / 2} 0 0"/>
         <geometry>
           <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
         </geometry>
+        <material name="tyre"/>
+      </visual>
+      <visual name="hub">
+        <origin xyz="0 ${y * (wheel_width / 2 + 0.005)} 0" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="0.09" length="0.01"/>
+        </geometry>
+        <material name="hub"/>
+      </visual>
+      <visual name="spoke">
+        <origin xyz="0 ${y * (wheel_width / 2 + 0.011)} 0"/>
+        <geometry>
+          <box size="0.17 0.012 0.03"/>
+        </geometry>
+        <material name="accent"/>
       </visual>
       <collision>
         <origin rpy="${pi / 2} 0 0"/>
