@@ -1,5 +1,17 @@
 # Contributing
 
+## Linear
+
+We plan the work in the [UK Lunabotics 2027](https://linear.app/kjdotio/project/uk-lunabotics-2027-ce646930b227) project. Read its [Start here](https://linear.app/kjdotio/document/start-here-workstreams-and-how-we-work-92932ab7323b) document first.
+
+- Each workstream is one parent issue with one owner. Break it into sub-issues as you plan.
+- Anyone can add issues. If you find work outside your workstream, put it in **Backlog** with a "done when", and tell whoever owns that area.
+- Move an issue to **In Progress** when you start, and to **Done** when its "done when" is met.
+- Mark dependencies with **blocked by**.
+- Put `Fixes INX-123` in your pull request description, so the issue links to it.
+
+The links in each issue are places to start, not the answer. Read the docs for our versions, look at what other teams did, try things in the sim, and come to your own conclusions. Write down what you decided and why, in the issue or in your pull request. Everything gets reviewed, so it's fine to try something and change it later. If you're stuck, ask in Discord.
+
 ## Pull requests
 
 1. Create a branch from `main`.
