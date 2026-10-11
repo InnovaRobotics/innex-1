@@ -1,25 +1,7 @@
-## What this changes
+## What and why
 
-<!-- What the change does and why. Link the Linear issue. -->
+<!-- What does this change, and why? Put "Fixes INX-123" on its own line to link the Linear issue. -->
 
-## How I tested it
+## Testing
 
-Highest level reached:
-
-- [ ] Not tested. Say why below.
-- [ ] Unit tests
-- [ ] Simulation
-- [ ] Bag replay
-- [ ] Bench test with the wheels off the ground
-- [ ] On the rover
-
-<!-- The commands you ran and their results. Link bags, logs or photos. -->
-
-## Rover impact
-
-- [ ] Changes how motors or actuators move
-- [ ] Changes communication with the Teensy, sensors or mission control
-- [ ] Changes the robot model, frames or sensor positions
-- [ ] None of these
-
-<!-- If you ticked a box above, describe the risk and what to check before the next run. -->
+<!-- What did you run or try, and what happened? If this affects how the rover moves, or how it talks to the Teensy, the sensors or mission control, say what to check before the next run. -->
