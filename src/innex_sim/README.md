@@ -31,13 +31,7 @@ ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
 
 The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.3 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.6 rad/s². These are starting values until the wheel test on blocks (INX-142) measures the real rover.
 
-To drive the rover from the keyboard, run this command in another terminal.
-
-```bash
-ros2 run innex_sim teleop_keyboard
-```
-
-The defaults live in `config/teleop_keyboard.yaml`. `teleop_twist_keyboard` keeps sending the last command until you press another key, so press `k` to stop.
+Drive the rover by publishing `geometry_msgs/msg/TwistStamped` on `/cmd_vel`. `DiffDrive` has no command timeout, so the rover keeps the last command until a new one arrives.
 
 | ROS topic | Type | Direction | Description |
 |---|---|---|---|
