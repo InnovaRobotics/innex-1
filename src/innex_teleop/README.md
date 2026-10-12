@@ -4,7 +4,7 @@ Drive the INNEX-1 rover from a game controller plugged into the laptop.
 
 ## Launch
 
-Plug in the controller. Build and source the workspace, then run this command.
+Plug in the controller first. Build and source the workspace, then run this command.
 
 ```bash
 ros2 launch innex_teleop joy.launch.py
@@ -17,7 +17,7 @@ The launch file starts two nodes:
 
 If either node exits, the launch stops both.
 
-Plug in the controller before you start the launch. In a distrobox container, `game_controller_node` did not open a controller that was plugged in after it started. If the launch output has no `Opened game controller` line, stop the launch and start it again.
+In a distrobox container, `game_controller_node` does not open a controller that you plug in after it starts. If the launch output has no `Opened game controller` line, stop the launch and start it again.
 
 ## Controls
 
@@ -37,7 +37,7 @@ ros2 run joy joy_enumerate_devices
 
 ## Speed limits
 
-The limits live in `config/joy.yaml`. They are low starting values until the wheel test on blocks (INX-142).
+The limits are in `config/joy.yaml`. They are low starting values until the wheel test on blocks (INX-142).
 
 | Parameter | Value | Meaning |
 |---|---|---|
@@ -51,18 +51,18 @@ Rebuild the workspace after you change the file.
 
 | ROS topic | Type | Description |
 |---|---|---|
-| `/joy` | `sensor_msgs/msg/Joy` | Controller state. Sent on every change, and at 20 Hz while nothing changes. |
-| `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | Velocity command in `base_link`. Sent once for every `/joy` message while the enable button is held. |
+| `/joy` | `sensor_msgs/msg/Joy` | The controller state. The driver sends it on every change, and at 20 Hz while nothing changes. |
+| `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | The velocity command in `base_link`. `teleop_node` sends one for every `/joy` message while you hold the enable button. |
 
 The rover side must subscribe to `/cmd_vel` with best-effort QoS and a depth of 1, as INX-140 specifies. `teleop_node` publishes with reliable QoS and a depth of 10, and has no parameter to change that. A best-effort subscriber never gets a resent command, so it never acts on an old one.
 
 ## When commands stop
 
-Letting go of the enable button is the only case that sends a zero command. In every other case the commands just stop:
+Letting go of the enable button is the only case that sends a zero command. In every other case no zero command reaches the rover:
 
 - a node crashes
 - the laptop loses its link to the rover
-- the zero command is lost on the way
+- the network drops the zero command
 
 The rover side must then stop on its own. The Jetson bridge sends zero when no `/cmd_vel` arrives for 500 ms (INX-140).
 
