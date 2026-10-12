@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+<robot name="innex_1" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
+
+  <!-- Will replace with proper values when rover is measured -->
+  <xacro:property name="chassis_length" value="1.000"/>
+  <xacro:property name="chassis_width" value="0.430"/>
+  <xacro:property name="chassis_height" value="0.480"/>
+  <xacro:property name="chassis_ground_clearance" value="0.240"/>
+  <xacro:property name="chassis_x_offset" value="0.107"/>
+  <xacro:property name="wheel_radius" value="0.154"/>
+  <xacro:property name="wheel_width" value="0.125"/>
+  <xacro:property name="wheelbase" value="0.705"/>
+  <xacro:property name="track" value="0.614"/>
+
+  <!-- will get proper masses when rover is weighed -->
+  <xacro:property name="chassis_mass" value="56.0"/>
+  <xacro:property name="wheel_mass" value="1.0"/>
+
+  <material name="carbon">
+    <color rgba="0.18 0.18 0.2 1"/>
+  </material>
+  <material name="tyre">
+    <color rgba="0.05 0.05 0.05 1"/>
+  </material>
+  <material name="hub">
+    <color rgba="0.7 0.7 0.72 1"/>
+  </material>
+  <material name="accent">
+    <color rgba="1.0 0.45 0.0 1"/>
+  </material>
+
+  <xacro:macro name="box_inertia" params="mass x y z">
+    <inertia ixx="${mass / 12 * (y * y + z * z)}" ixy="0" ixz="0"
+             iyy="${mass / 12 * (x * x + z * z)}" iyz="0"
+             izz="${mass / 12 * (x * x + y * y)}"/>
+  </xacro:macro>
+
+  <link name="base_link"/>
+
+  <joint name="chassis_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="chassis"/>
+    <origin xyz="${chassis_x_offset} 0 ${chassis_ground_clearance + chassis_height / 2}"/>
+  </joint>
+
+  <link name="chassis">
+    <visual name="body">
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual name="front_plate">
+      <origin xyz="${chassis_length / 2 + 0.005} 0 0"/>
+      <geometry>
+        <box size="0.01 ${chassis_width - 0.04} 0.12"/>
+      </geometry>
+      <material name="accent"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="${chassis_mass}"/>
+      <xacro:box_inertia mass="${chassis_mass}" x="${chassis_length}" y="${chassis_width}" z="${chassis_height}"/>
+    </inertial>
+  </link>
+
+    <xacro:macro name="wheel" params="name x y">
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_wheel"/>
+      <origin xyz="${x * wheelbase / 2} ${y * track / 2} ${wheel_radius}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <link name="${name}_wheel">
+      <visual name="tyre">
+        <origin rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="tyre"/>
+      </visual>
+      <visual name="hub">
+        <origin xyz="0 ${y * (wheel_width / 2 + 0.005)} 0" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="0.09" length="0.01"/>
+        </geometry>
+        <material name="hub"/>
+      </visual>
+      <visual name="spoke">
+        <origin xyz="0 ${y * (wheel_width / 2 + 0.011)} 0"/>
+        <geometry>
+          <box size="0.17 0.012 0.03"/>
+        </geometry>
+        <material name="accent"/>
+      </visual>
+      <collision>
+        <origin rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="${wheel_mass * (3 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12}" ixy="0" ixz="0"
+                 iyy="${wheel_mass * wheel_radius * wheel_radius / 2}" iyz="0"
+                 izz="${wheel_mass * (3 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <xacro:wheel name="front_left" x="1" y="1"/>
+  <xacro:wheel name="front_right" x="1" y="-1"/>
+  <xacro:wheel name="rear_left" x="-1" y="1"/>
+  <xacro:wheel name="rear_right" x="-1" y="-1"/>
+
+  <xacro:include filename="innex_1.gazebo.xacro"/>
+
+</robot>
