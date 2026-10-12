@@ -17,6 +17,8 @@ The launch file starts two nodes:
 
 If either node exits, the launch stops both.
 
+Plug in the controller before you start the launch. In a distrobox container, `game_controller_node` did not open a controller that was plugged in after it started. If the launch output has no `Opened game controller` line, stop the launch and start it again.
+
 ## Controls
 
 | Control | What it does |
