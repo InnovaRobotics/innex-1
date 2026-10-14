@@ -10,7 +10,7 @@ The world uses the `gz-sim-physics-system`, sensors (ogre2) and IMU systems. The
 
 ## Launch
 
-Build and source the workspace, then run one of these commands.
+[Build and source the workspace](../../ONBOARDING.md#5-build-the-workspace-and-run-the-sim), then run one of these commands.
 
 ```bash
 ros2 launch innex_sim moon_yard.launch.py
@@ -19,7 +19,7 @@ ros2 launch innex_sim moon_yard.launch.py gui:=false
 
 The launch file also starts `robot_state_publisher`, spawns the rover and starts a `ros_gz_bridge` configured by `config/bridge.yaml`.
 
-To run the world without ROS, source the workspace so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
+To run the world without ROS, [source the workspace](../../ONBOARDING.md#5-build-the-workspace-and-run-the-sim) so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
 
 ## Rover
 
@@ -30,6 +30,8 @@ ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
 ```
 
 The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.3 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.6 rad/s². These are starting values until the wheel test on blocks (INX-142) measures the real rover.
+
+The `/odom` topic starts at zero where the rover spawns, so it's relative to the spawn pose, not the arena frame.
 
 Drive the rover by publishing `geometry_msgs/msg/TwistStamped` on `/cmd_vel`. `DiffDrive` has no command timeout, so the rover keeps the last command until a new one arrives.
 
@@ -84,7 +86,7 @@ python3 src/innex_sim/scripts/generate_assets.py --output-dir /tmp/innex_models
 
 ## Open the GUI from an SSH or VS Code terminal
 
-These terminals have no display. Set these variables first, then launch. The window opens on the VM desktop (the UTM window).
+These terminals have no display. Someone must be logged in to the VM desktop first, because the `XAUTHORITY` file exists only for a desktop session. Set these variables, then launch. The window opens on the VM desktop (the UTM window).
 
 ```bash
 export DISPLAY=:0

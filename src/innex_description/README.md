@@ -14,7 +14,7 @@ The dimensions come from the June 2026 CAD. INX-138 replaces them with measureme
 
 ## View the model
 
-Build and source the workspace, then run each command in its own terminal.
+[Build and source the workspace](../../ONBOARDING.md#5-build-the-workspace-and-run-the-sim), then run each command in its own terminal.
 
 ```bash
 ros2 launch innex_description description.launch.py
