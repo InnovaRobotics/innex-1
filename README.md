@@ -16,3 +16,5 @@ New to the team? Start with [ONBOARDING.md](ONBOARDING.md).
 | [docs/safety.md](docs/safety.md) | Work safely with the rover |
 | [docs/jetson.md](docs/jetson.md) | Get access to the Jetson |
 | [docs/rules.md](docs/rules.md) | Summary of the UK Lunabotics rulebook |
+| [docs/system-design.md](docs/system-design.md) | How the rover and its subsystems fit together |
+| [docs/glossary.md](docs/glossary.md) | Terms you meet in the design pages |

@@ -36,6 +36,8 @@ Learn what your first task needs. You can learn the rest later.
 | ROS 2 | [ROS 2 Jazzy tutorials](https://docs.ros.org/en/jazzy/Tutorials.html). Start with the beginner CLI tools. |
 | Gazebo | [Gazebo Harmonic tutorials](https://gazebosim.org/docs/harmonic/tutorials) |
 
+Read [docs/system-design.md](docs/system-design.md) for how the rover fits together.
+
 Use material for ROS 2 Jazzy and Gazebo Harmonic. Material for ROS 2 Humble or Gazebo Fortress often doesn't work. [AGENTS.md](AGENTS.md#versions) lists the versions the project uses.
 
 ## 3. Set up your computer
