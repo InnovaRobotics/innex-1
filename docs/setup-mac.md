@@ -32,7 +32,7 @@ For example, an M3 Pro MacBook Pro with 18 GB of RAM and 11 cores uses 8192 MiB 
 
 1. Download UTM from [mac.getutm.app](https://mac.getutm.app) and move it to the **Applications** folder.
 2. Download the Ubuntu 24.04 desktop image for your Mac:
-    - Apple silicon: `ubuntu-24.04.5-desktop-arm64.iso` from [cdimage.ubuntu.com/releases/24.04/release](https://cdimage.ubuntu.com/releases/24.04/release/)
+    - Apple silicon: `ubuntu-24.04.5-desktop-arm64.iso` from [cdimage.ubuntu.com/releases/24.04/release]([https://cdimage.ubuntu.com/releases/24.04/release/](http://ftp.usf.edu/pub/ubuntu-releases/24.04/ubuntu-24.04.4-desktop-amd64.iso))
     - Intel: the latest `ubuntu-24.04.*-desktop-amd64.iso` from [releases.ubuntu.com/24.04](https://releases.ubuntu.com/24.04/)
 
 ## 2. Create the VM
