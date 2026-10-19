@@ -3,6 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -26,6 +27,9 @@ def generate_launch_description():
             'gui', default_value='true',
             description='Start the Gazebo GUI. Use false for server only.'),
         DeclareLaunchArgument(
+            'foxglove', default_value='false',
+            description='Start the Foxglove bridge on port 8765 for mission control.'),
+        DeclareLaunchArgument(
             'x', default_value='1.0',
             description='Rover spawn x in the arena frame, in metres.'),
         DeclareLaunchArgument(
@@ -42,11 +46,29 @@ def generate_launch_description():
                 get_package_share_directory('innex_sim'), 'config', 'bridge.yaml')}],
             output='screen',
         ),
+        Node(
+            package='ros_gz_image',
+            executable='image_bridge',
+            arguments=['/oak_front/rgb/image_raw', '/oak_rear/rgb/image_raw'],
+            output='screen',
+            parameters=[{'use_sim_time': True}],
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('innex_description'),
                              'launch', 'description.launch.py')),
             launch_arguments={'use_sim_time': 'true'}.items(),
+        ),
+        Node(
+            package='foxglove_bridge',
+            executable='foxglove_bridge',
+            parameters=[{
+                'port': 8765,
+                'address': '0.0.0.0',
+                'use_sim_time': True,
+            }],
+            condition=IfCondition(LaunchConfiguration('foxglove')),
+            output='screen',
         ),
         Node(
             package='ros_gz_sim',

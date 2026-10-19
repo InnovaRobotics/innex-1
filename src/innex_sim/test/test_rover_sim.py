@@ -128,10 +128,26 @@ def test_front_camera_publishes(sim):
     assert frame_id == 'oak_front_rgb_camera_optical_frame'
 
 
+def test_front_camera_compressed_publishes(sim):
+    topic = '/oak_front/rgb/image_raw/compressed'
+    frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
+    format_val = echo_once(sim.env, topic, 'format').splitlines()[0].strip()
+    assert frame_id == 'oak_front_rgb_camera_optical_frame'
+    assert 'jpeg' in format_val.lower()
+
+
 def test_rear_camera_publishes(sim):
     topic = '/oak_rear/rgb/image_raw'
     frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
     assert frame_id == 'oak_rear_rgb_camera_optical_frame'
+
+
+def test_rear_camera_compressed_publishes(sim):
+    topic = '/oak_rear/rgb/image_raw/compressed'
+    frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
+    format_val = echo_once(sim.env, topic, 'format').splitlines()[0].strip()
+    assert frame_id == 'oak_rear_rgb_camera_optical_frame'
+    assert 'jpeg' in format_val.lower()
 
 
 def test_ouster_points_publishes(sim):

@@ -93,9 +93,9 @@ def test_oak_d_pro_cameras(robot):
         sensor = robot.find(f'gazebo[@reference="{prefix}_frame"]/sensor[@name="{prefix}"]')
         assert sensor is not None
         assert sensor.get('type') == 'camera'
-        assert sensor.find('topic').text == f'{prefix}/image_raw'
+        assert sensor.find('topic').text == f'{prefix}/rgb/image_raw'
         assert sensor.find('camera/optical_frame_id').text == f'{prefix}_rgb_camera_optical_frame'
-        assert sensor.find('camera/camera_info_topic').text == f'{prefix}/camera_info'
+        assert sensor.find('camera/camera_info_topic').text == f'{prefix}/rgb/camera_info'
 
 
 def test_ouster_os1_lidar(robot):
