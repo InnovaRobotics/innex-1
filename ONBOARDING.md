@@ -1,173 +1,146 @@
 # Onboarding
 
-This guide takes you from nothing to your first pull request.
+## Choose your path
 
-## Contents
-
-1. [Choose your path](#1-choose-your-path)
-2. [Learn the basics](#2-learn-the-basics)
-3. [Set up your computer](#3-set-up-your-computer)
-4. [Check your setup](#4-check-your-setup)
-5. [Build the workspace and run the sim](#5-build-the-workspace-and-run-the-sim)
-6. [Read the safety rules](#6-read-the-safety-rules)
-7. [Pick a task](#7-pick-a-task)
-8. [Open your first pull request](#8-open-your-first-pull-request)
-9. [Get help](#9-get-help)
-
-## 1. Choose your path
-
-| Path | What you work on | Sections |
+| Path | You work on | Sections to read |
 |---|---|---|
-| Software | ROS 2 nodes, teleoperation, simulation, perception | All |
-| Firmware | The Teensy that controls the motors and actuators | 1, 2 and 6 to 9. For firmware setup, ask a lead. To use the sim, also do 3 to 5. |
-| Rover access | Code that runs on the Jetson and the rover | All, then [docs/jetson.md](docs/jetson.md) |
+| Software | ROS 2 code, teleop, simulation and perception | All sections |
+| Firmware | Teensy code for the motors and actuators | Get access, Learn the basics, Read the safety rules, Pick a task, Open your first pull request, and Get help. Ask a lead for firmware setup. To use the simulation, also read the setup sections. |
+| Rover access | Code that runs on the Jetson or the rover | All sections, then [Jetson](docs/jetson.md) |
 
 The software path needs no hardware.
 
-## 2. Learn the basics
+## Get access
 
-Learn what your first task needs. You can learn the rest later.
+Ask a lead for each of these before you start.
 
-| Skill | Where to learn |
+- Membership of the InnovaRobotics GitHub organisation. You need it to push a branch.
+- An invitation to the INNEX1 Rover team in Linear.
+- An invitation to the team Discord. This repo does not hold the invite link.
+- For rover access only: a Tailscale account, and a lead who shares the Jetson with you.
+
+Then create an SSH key for GitHub on the computer you push from. If you build in a VM or WSL, create it there after you [set up your computer](#set-up-your-computer), because a key on your Mac or Windows host does not work inside Ubuntu. Follow GitHub's guide to [adding a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
+
+1. Create the key:
+   ```bash
+   ssh-keygen -t ed25519
+   ```
+2. Print the public key:
+   ```bash
+   cat ~/.ssh/id_ed25519.pub
+   ```
+3. Add the public key in GitHub under **Settings** > **SSH and GPG keys**.
+
+## Learn the basics
+
+Learn what your first task needs. Leave the rest until later.
+
+| Skill | Start with |
 |---|---|
 | Git and GitHub | [GitHub's Git guide](https://docs.github.com/en/get-started/getting-started-with-git) |
 | The Linux command line | [Ubuntu's command line tutorial](https://ubuntu.com/tutorials/command-line-for-beginners) |
 | Python | [The Python tutorial](https://docs.python.org/3.12/tutorial/) |
-| ROS 2 | [ROS 2 Jazzy tutorials](https://docs.ros.org/en/jazzy/Tutorials.html). Start with the beginner CLI tools. |
+| ROS 2 | [ROS 2 Jazzy tutorials](https://docs.ros.org/en/jazzy/Tutorials.html). Start with the beginner command line tools. |
 | Gazebo | [Gazebo Harmonic tutorials](https://gazebosim.org/docs/harmonic/tutorials) |
 
-Read [docs/system-design.md](docs/system-design.md) for how the rover fits together.
+Use only ROS 2 Jazzy and Gazebo Harmonic material. Material for ROS 2 Humble or Gazebo Fortress often does not work with this project.
 
-Use material for ROS 2 Jazzy and Gazebo Harmonic. Material for ROS 2 Humble or Gazebo Fortress often doesn't work. [AGENTS.md](AGENTS.md#versions) lists the versions the project uses.
-
-## 3. Set up your computer
+## Set up your computer
 
 Follow the guide for your computer:
 
-- [Mac](docs/setup-mac.md)
-- [Windows](docs/setup-windows.md)
+- Mac: [Set up a Mac](docs/setup-mac.md)
+- Windows: [Set up Windows with WSL](docs/setup-windows.md)
+- Ubuntu 24.04: [Install ROS 2 on Ubuntu](docs/setup-ubuntu.md)
 
-On Ubuntu 24.04, follow sections 3 to 5 of the Windows guide. Leave out the `LIBGL_ALWAYS_SOFTWARE` line, because it's only for WSL.
+On a Mac or a Windows PC, you should install Ubuntu first. Then continue with the Ubuntu guide inside the virtual machine or WSL.
 
-## 4. Check your setup
+## Check your setup
 
-The last sections of your setup guide test your setup. When they pass, you see:
+The Ubuntu guide includes three checks. You should see:
 
-- The listener print the talker's messages
-- The shapes world in Gazebo
-- The `/chatter` topic in Foxglove
+- The listener prints the talker's messages.
+- Gazebo shows shapes.
+- The `/chatter` topic appears in Foxglove.
 
-If a check fails, use the troubleshooting table at the end of your guide. If that doesn't fix it, ask for help.
+If a check fails, use the troubleshooting table in the guide. If the table does not solve the problem, [ask for help](#get-help).
 
-## 5. Build the workspace and run the sim
+## Build the workspace and run the simulation
 
-Run these steps in your development environment: the VM on a Mac, or Ubuntu on Windows. On a Mac, use an SSH session to the VM.
+Run these steps in your Ubuntu environment. On a Mac, use an SSH session to the virtual machine. On Windows, use an Ubuntu terminal.
 
-1. Add an SSH key from your development environment to GitHub. You need it later to push your branch. Follow GitHub's guide to [adding a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account). To create the key and print the public key, run:
+1. Set up rosdep. Do this once for each computer.
+   ```bash
+   sudo rosdep init
+   rosdep update
+   ```
+   If `rosdep init` says the sources file already exists, go to the next step.
 
-    ```
-    ssh-keygen -t ed25519
-    cat ~/.ssh/id_ed25519.pub
-    ```
+2. Create the workspace and clone the repo.
+   ```bash
+   mkdir -p ~/innex_ws/src
+   cd ~/innex_ws/src
+   git clone git@github.com:InnovaRobotics/innex-1.git
+   ```
 
-2. Set up rosdep, once per machine:
+3. Install the dependencies from the workspace root.
+   ```bash
+   cd ~/innex_ws
+   rosdep install --from-paths src --ignore-src -y
+   ```
 
-    ```
-    sudo rosdep init
-    rosdep update
-    ```
+4. Build the workspace and load it.
+   ```bash
+   colcon build --symlink-install
+   source install/setup.bash
+   ```
+   Add the workspace to your start-up file, so every new terminal loads it:
+   ```bash
+   echo "source ~/innex_ws/install/setup.bash" >> ~/.bashrc
+   ```
+   Run `colcon build` from `~/innex_ws` each time you change code. Do not run it from inside `src`.
 
-    If `rosdep init` says the sources file already exists, carry on.
+5. Run the tests.
+   ```bash
+   colcon test
+   colcon test-result --verbose
+   ```
+   The summary line must show 0 errors and 0 failures.
 
-3. Create the workspace and clone the repo:
+6. Start the simulation. On a Mac, run this command in a terminal on the VM desktop, which is the UTM window. On Windows, run it in an Ubuntu terminal.
+   ```bash
+   ros2 launch innex_sim moon_yard.launch.py
+   ```
+   Gazebo opens with the arena. The rover is in the start zone.
 
-    ```
-    mkdir -p ~/innex_ws/src
-    cd ~/innex_ws/src
-    git clone git@github.com:InnovaRobotics/innex-1.git
-    ```
+   From an SSH session, add `gui:=false`. An SSH session has no display. In a second terminal, run `ros2 topic list`. If the list shows only `/parameter_events` and `/rosout`, wait a few seconds and run the command again.
 
-4. Install the dependencies from the workspace root:
+When the simulation runs, read [System design](docs/system-design.md) to see how the parts fit together.
 
-    ```
-    cd ~/innex_ws
-    rosdep install --from-paths src --ignore-src -y
-    ```
+## Read the safety rules
 
-5. Build the workspace and load it:
+Read [Rover safety](docs/safety.md) before you work near the rover.
 
-    ```
-    colcon build --symlink-install
-    source install/setup.bash
-    ```
+## Pick a task
 
-    Add the workspace to your shell start-up file, so new terminals load it:
+Tasks are in Linear. [Start here](https://linear.app/kjdotio/document/start-here-workstreams-and-how-we-work-92932ab7323b) explains the workstreams, milestones and sprints. Ask a lead which workstream to join. Then ask its owner for a first issue.
 
-    ```
-    echo "source ~/innex_ws/install/setup.bash" >> ~/.bashrc
-    ```
+## Open your first pull request
 
-    Run `colcon build` from `~/innex_ws` every time you change code. Never run it from inside `src`.
-
-6. Run the tests:
-
-    ```
-    colcon test
-    colcon test-result --verbose
-    ```
-
-    The summary line must show 0 errors and 0 failures.
-
-7. Run the sim. On a Mac, run this in a terminal on the VM desktop (the UTM window). On Windows, run it in an Ubuntu terminal.
-
-    ```
-    ros2 launch innex_sim moon_yard.launch.py
-    ```
-
-    Gazebo opens with the arena and the rover in the start zone.
-
-    From an SSH session, add `gui:=false`, because there is no display. In a second terminal, run `ros2 topic list` to check that the sim works. If the list shows only `/parameter_events` and `/rosout`, wait a few seconds and run it again.
-
-8. Drive the rover. In a second terminal, run:
-
-    ```
-    ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p stamped:=true -p frame_id:=base_link
-    ```
-
-    Press `i` to drive forward and `k` to stop. The sim rover keeps its last command until it gets another one, so press `k` before you close the window. Press Ctrl+C in each terminal to finish.
-
-If a step fails, ask in Discord. Say which command you ran, and paste the exact error, as in [Get help](#9-get-help).
-
-## 6. Read the safety rules
-
-Read [docs/safety.md](docs/safety.md) before you work near the rover. This applies to software members too.
-
-## 7. Pick a task
-
-Tasks are in Linear. The [Start here](https://linear.app/kjdotio/document/start-here-workstreams-and-how-we-work-92932ab7323b) document explains how work is organised. Ask a lead to help you pick a task that fits your skills.
-
-## 8. Open your first pull request
-
-1. Go to the repo:
-
-    ```
-    cd ~/innex_ws/src/innex-1
-    ```
-
+1. Change to the repo:
+   ```bash
+   cd ~/innex_ws/src/innex-1
+   ```
 2. Create a branch:
-
-    ```
-    git switch -c short-description
-    ```
-
-3. Make your change and commit it.
+   ```bash
+   git switch -c short-description
+   ```
+3. Make your change. Commit it.
 4. Push the branch.
-5. Open a pull request on GitHub.
+5. Open a pull request on GitHub. Fill in both headings of the template.
 
-[CONTRIBUTING.md](CONTRIBUTING.md) tells you how to write the pull request, and how review and merging work. It also covers AI use.
+[CONTRIBUTING.md](CONTRIBUTING.md) explains how to write the description, how review works, and how to use AI tools.
 
-## 9. Get help
+## Get help
 
-Ask in the team Discord. Nobody expects you to know this already.
-
-When you ask, say what you tried. Paste the exact error.
+Ask in the team Discord. Say which command you ran and what you tried. Paste the exact error.

@@ -10,11 +10,11 @@ The model has a chassis and four wheels on continuous joints. `innex_1.gazebo.xa
 
 ## Dimensions and masses
 
-The dimensions come from the June 2026 CAD. INX-138 replaces them with measurements of the rover. The masses are estimates until the rover is weighed.
+The dimensions come from the June 2026 CAD. Measurements of the real rover replace them. The masses are estimates until the rover is weighed.
 
 ## View the model
 
-[Build and source the workspace](../../ONBOARDING.md#5-build-the-workspace-and-run-the-sim), then run each command in its own terminal.
+[Build and source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation), then run each command in its own terminal.
 
 ```bash
 ros2 launch innex_description description.launch.py
