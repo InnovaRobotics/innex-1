@@ -96,3 +96,27 @@ def test_oak_d_pro_cameras(robot):
         assert sensor.find('topic').text == f'{prefix}/image_raw'
         assert sensor.find('camera/optical_frame_id').text == f'{prefix}_rgb_camera_optical_frame'
         assert sensor.find('camera/camera_info_topic').text == f'{prefix}/camera_info'
+
+
+def test_ouster_os1_lidar(robot):
+    links = {link.get('name'): link for link in robot.findall('link')}
+    joints = {joint.get('name'): joint for joint in robot.findall('joint')}
+
+    assert 'os_sensor' in links
+    assert 'os_lidar' in links
+
+    sensor_joint = joints['os_sensor_joint']
+    assert sensor_joint.find('parent').get('link') == 'chassis'
+    assert sensor_joint.find('child').get('link') == 'os_sensor'
+
+    lidar_joint = joints['os_sensor_lidar_joint']
+    assert lidar_joint.find('parent').get('link') == 'os_sensor'
+    assert lidar_joint.find('child').get('link') == 'os_lidar'
+
+    sensor = robot.find('gazebo[@reference="os_sensor"]/sensor[@name="os_sensor"]')
+    assert sensor is not None
+    assert sensor.get('type') == 'gpu_lidar'
+    assert sensor.find('topic').text == 'ouster'
+    assert sensor.find('gz_frame_id').text == 'os_sensor'
+    assert int(sensor.find('lidar/scan/vertical/samples').text) == 128
+    assert int(sensor.find('lidar/scan/horizontal/samples').text) == 512

@@ -134,6 +134,12 @@ def test_rear_camera_publishes(sim):
     assert frame_id == 'oak_rear_rgb_camera_optical_frame'
 
 
+def test_ouster_points_publishes(sim):
+    topic = '/ouster/points'
+    frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
+    assert frame_id == 'os_sensor'
+
+
 def test_odom_to_base_link_transform(sim):
     context = rclpy.Context()
     rclpy.init(context=context, domain_id=int(sim.env['ROS_DOMAIN_ID']))
