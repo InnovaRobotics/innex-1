@@ -22,6 +22,8 @@ __pycache__/
 # Local environment
 .env
 .envrc
+tasks/
+*.log
 
 # Data: bags and evidence live in OneDrive, never in git
 bags/

@@ -118,6 +118,17 @@
   <xacro:wheel name="rear_left" x="-1" y="1"/>
   <xacro:wheel name="rear_right" x="-1" y="-1"/>
 
+  <xacro:include filename="sensors/oak_d_pro.xacro"/>
+
+  <!-- Front and rear OAK-D Pro cameras -->
+  <xacro:oak_d_pro prefix="oak_front" parent="chassis">
+    <origin xyz="${chassis_length / 2 + 0.01 + 0.023 / 2} 0 0.05" rpy="0 0 0"/>
+  </xacro:oak_d_pro>
+
+  <xacro:oak_d_pro prefix="oak_rear" parent="chassis">
+    <origin xyz="${-chassis_length / 2 - 0.01 - 0.023 / 2} 0 0.05" rpy="0 0 ${pi}"/>
+  </xacro:oak_d_pro>
+
   <xacro:include filename="innex_1.gazebo.xacro"/>
 
 </robot>

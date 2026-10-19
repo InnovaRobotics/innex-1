@@ -68,3 +68,31 @@ def test_inertials_are_physical(robot):
         inertia = inertial.find('inertia')
         for axis in ('ixx', 'iyy', 'izz'):
             assert float(inertia.get(axis)) > 0, f'{name} {axis}'
+
+
+def test_oak_d_pro_cameras(robot):
+    links = {link.get('name'): link for link in robot.findall('link')}
+    joints = {joint.get('name'): joint for joint in robot.findall('joint')}
+
+    for prefix in ('oak_front', 'oak_rear'):
+        assert f'{prefix}_frame' in links
+        assert f'{prefix}_rgb_camera_optical_frame' in links
+
+        joint = joints[f'{prefix}_joint']
+        assert joint.find('parent').get('link') == 'chassis'
+        assert joint.find('child').get('link') == f'{prefix}_frame'
+
+        optical_joint = joints[f'{prefix}_optical_joint']
+        assert optical_joint.find('parent').get('link') == f'{prefix}_frame'
+        assert optical_joint.find('child').get('link') == f'{prefix}_rgb_camera_optical_frame'
+        rpy = floats(optical_joint.find('origin').get('rpy'))
+        assert rpy[0] == pytest.approx(-3.14159265 / 2, abs=1e-3)
+        assert rpy[1] == pytest.approx(0.0, abs=1e-3)
+        assert rpy[2] == pytest.approx(-3.14159265 / 2, abs=1e-3)
+
+        sensor = robot.find(f'gazebo[@reference="{prefix}_frame"]/sensor[@name="{prefix}"]')
+        assert sensor is not None
+        assert sensor.get('type') == 'camera'
+        assert sensor.find('topic').text == f'{prefix}/image_raw'
+        assert sensor.find('camera/optical_frame_id').text == f'{prefix}_rgb_camera_optical_frame'
+        assert sensor.find('camera/camera_info_topic').text == f'{prefix}/camera_info'

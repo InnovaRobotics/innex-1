@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
+
+  <!-- Luxonis OAK-D Pro active stereo camera macro -->
+  <xacro:macro name="oak_d_pro" params="prefix parent *origin topic_prefix:='' horizontal_fov:=1.2043 width:=640 height:=400 rate:=15.0">
+    <xacro:property name="camera_mass" value="0.091"/>
+    <xacro:property name="camera_x" value="0.023"/>
+    <xacro:property name="camera_y" value="0.097"/>
+    <xacro:property name="camera_z" value="0.030"/>
+    <xacro:property name="actual_topic_prefix" value="${topic_prefix if topic_prefix else prefix}"/>
+
+    <!-- Mechanical / base mount joint and link -->
+    <joint name="${prefix}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${prefix}_frame"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${prefix}_frame">
+      <visual>
+        <geometry>
+          <box size="${camera_x} ${camera_y} ${camera_z}"/>
+        </geometry>
+        <material name="carbon"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="${camera_x} ${camera_y} ${camera_z}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${camera_mass}"/>
+        <inertia ixx="${camera_mass / 12 * (camera_y * camera_y + camera_z * camera_z)}" ixy="0" ixz="0"
+                 iyy="${camera_mass / 12 * (camera_x * camera_x + camera_z * camera_z)}" iyz="0"
+                 izz="${camera_mass / 12 * (camera_x * camera_x + camera_y * camera_y)}"/>
+      </inertial>
+    </link>
+
+    <!-- REP-103 Optical frame: +X right, +Y down, +Z forward -->
+    <joint name="${prefix}_optical_joint" type="fixed">
+      <parent link="${prefix}_frame"/>
+      <child link="${prefix}_rgb_camera_optical_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi / 2} 0 ${-pi / 2}"/>
+    </joint>
+
+    <link name="${prefix}_rgb_camera_optical_frame"/>
+
+    <!-- Gazebo Harmonic Camera Sensor -->
+    <gazebo reference="${prefix}_frame">
+      <sensor name="${prefix}" type="camera">
+        <gz_frame_id>${prefix}_frame</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>${rate}</update_rate>
+        <visualize>true</visualize>
+        <topic>${actual_topic_prefix}/image_raw</topic>
+        <camera>
+          <horizontal_fov>${horizontal_fov}</horizontal_fov>
+          <image>
+            <width>${width}</width>
+            <height>${height}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>30.0</far>
+          </clip>
+          <optical_frame_id>${prefix}_rgb_camera_optical_frame</optical_frame_id>
+          <camera_info_topic>${actual_topic_prefix}/camera_info</camera_info_topic>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+</robot>
