@@ -75,7 +75,7 @@ Use the Ubuntu 24.04 desktop. Gazebo opens its window on the desktop.
    ```bash
    ros2 run demo_nodes_cpp talker
    ```
-3. Open Foxglove and click **Open connection**. Select **Foxglove WebSocket**.
+3. Open Foxglove. If you do not have it yet, install it from [foxglove.dev/download](https://foxglove.dev/download). Click **Open connection** and select **Foxglove WebSocket**.
    - If Foxglove runs on this machine, enter `ws://localhost:8765`.
    - If Foxglove runs on another computer, enter `ws://IP_ADDRESS:8765`. Use the address from `hostname -I` on this machine.
 4. Click **Open**. Click the **Topics** tab. The `/chatter` topic shows 1 Hz.

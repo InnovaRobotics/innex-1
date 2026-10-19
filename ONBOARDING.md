@@ -19,7 +19,7 @@ Ask a lead for each of these before you start.
 - An invitation to the team Discord. This repo does not hold the invite link.
 - For rover access only: a Tailscale account, and a lead who shares the Jetson with you.
 
-Then create an SSH key for GitHub. Follow GitHub's guide to [adding a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
+Then create an SSH key for GitHub on the computer you push from. If you build in a VM or WSL, create it there after you [set up your computer](#set-up-your-computer), because a key on your Mac or Windows host does not work inside Ubuntu. Follow GitHub's guide to [adding a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
 1. Create the key:
    ```bash

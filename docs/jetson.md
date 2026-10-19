@@ -17,7 +17,7 @@ Run this command on the Jetson:
 sudo nvpmodel -q
 ```
 
-The default mode is 25 W, according to [NVIDIA's BSP setup guide](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/setup_bsp.html). If the output does not list 25 W or MAXN SUPER, tell a lead.
+The default mode is 25 W, according to [NVIDIA's BSP setup guide](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/setup_bsp.html). If the output does not show 25 W, or shows MAXN SUPER, tell a lead.
 
 ## Get access
 
