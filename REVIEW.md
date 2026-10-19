@@ -1,21 +1,21 @@
 # Review guidance
 
-INNEX-1 is a lunar excavation rover for UK Lunabotics. The software is ROS 2 Jazzy on Ubuntu 24.04 and a Jetson on JetPack 7.2.1. The firmware runs on a Teensy 4.1 and is built with PlatformIO. This code moves heavy motors. Review what the code does, not how it looks.
+INNEX-1 is a lunar excavation rover for UK Lunabotics. The software runs ROS 2 Jazzy on Ubuntu 24.04. The Jetson runs JetPack 7.2.1. The firmware runs on a Teensy 4.1 and builds with PlatformIO. This code moves heavy motors. Review what the code does. Do not review how it looks.
 
-Your comments help a person decide. They don't approve or block a pull request.
+Your comments help a person decide. Your comments do not approve or block a pull request.
 
 ## Scope
 
-- Review only the lines that the pull request adds or changes. Don't report problems in code that it doesn't touch.
+- Review only the lines that the pull request adds or changes. Do not report problems in code that it does not touch.
 - Check the change against what the description says it does.
-- A false finding is worse than a missed one. Report a problem only when you're confident that it's real.
-- Cite a rule for each Blocking or Warning finding. The rules are in this file, `AGENTS.md`, `CONTRIBUTING.md`, `docs/safety.md` and `docs/rules.md`.
+- Report a problem only when you are sure it is real. A false finding is worse than a missed one.
+- Cite a rule for each Blocking or Warning finding. The rules are in this file, [AGENTS.md](AGENTS.md), [docs/safety.md](docs/safety.md), [docs/jetson.md](docs/jetson.md) and [docs/rules.md](docs/rules.md).
 
-Don't report:
+Do not report:
 
 - Style, naming or formatting, unless it hides a defect.
-- Refactors that a fix doesn't need.
-- Features that the pull request doesn't claim to add.
+- Refactors that a fix does not need.
+- Features that the pull request does not claim to add.
 - Wording in docs. Report only wrong facts, broken commands and broken links.
 
 ## Severity
@@ -30,19 +30,19 @@ Use these definitions exactly:
 
 ### Safety
 
-1. Each path that commands a motor or actuator must stop the output when commands stop arriving.
-2. Don't remove or lengthen an existing command timeout.
-3. Commands must be absolute setpoints, such as a velocity or a position.
-4. Only one node or task can command each motor or actuator.
-5. On a fault, stop the output. Don't hold the last value.
+1. Each path that commands a motor or actuator stops the output when commands stop arriving.
+2. Do not remove or lengthen an existing command timeout.
+3. Commands are absolute setpoints, such as a velocity or a position.
+4. Only one node or task commands each motor or actuator.
+5. On a fault, stop the output. Do not hold the last value.
 6. A change to a current limit, duty-cycle limit or speed limit needs a reason in the description.
 
 ### Competition rules
 
-7. Don't use the arena walls or structure for mapping, localisation, navigation or collision avoidance.
-8. Don't use compass data. The OAK-D's IMU has a magnetometer. Use only its gyro and accelerometer data or its game rotation vector.
-9. Don't send raw images or point clouds to mission control. The link must average 4,000 kbps or less.
-10. Don't send commands or orientation data to the rover during a hands-free autonomy attempt.
+7. Do not use the arena walls for mapping, localisation, navigation or collision avoidance.
+8. Do not use compass data. The OAK-D's IMU has a magnetometer. Use only its gyro and accelerometer data, or its game rotation vector.
+9. Do not send raw images or point clouds to mission control. The link must average 4,000 kbps or less.
+10. Do not send commands or orientation data to the rover during a hands-free autonomy attempt.
 
 ### ROS 2
 
@@ -53,17 +53,17 @@ Use these definitions exactly:
 
 ### Firmware
 
-15. Don't use `delay()` or blocking reads in the control loop. Don't allocate memory after `setup()`.
+15. Do not use `delay()` or blocking reads in the control loop. Do not allocate memory after `setup()`.
 16. A change to the serial protocol must update the Teensy side and the Jetson side in the same pull request.
 
 ### Evidence and secrets
 
 17. The description must say what the author tested. A claim about rover behaviour needs evidence: a bag, a log or a photo.
-18. Don't commit credentials, private network addresses or personal details.
+18. Do not commit credentials, private network addresses or personal details.
 
 ## How to write each finding
 
-Write for a first-year student who can program but is new to robotics. The author should learn something from every comment.
+Write for a first-year student who can program but is new to robotics. The author should learn something from each comment.
 
 Use this order:
 
@@ -72,13 +72,15 @@ Use this order:
 3. How to fix it. Add a short code example if it helps.
 4. Which rule it breaks, with a link to the rule in this repository.
 
+Also:
+
 - Use short sentences and everyday words.
-- Explain each technical term and each acronym the first time that you use it.
+- Explain each technical term and acronym the first time you use it.
 - Put one problem in each comment.
 - Start each comment with its severity.
-- If you aren't sure, say so, and say how to check.
+- If you are not sure, say so, and say how to check.
 - Link outside documentation only if you checked it. Otherwise, name the documentation and say that it needs checking.
-- Be direct and kind. Don't praise the change or pad the comment.
+- Be direct and kind. Do not praise the change, and do not pad the comment.
 
 Example of a bad finding:
 

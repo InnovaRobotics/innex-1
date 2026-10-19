@@ -4,13 +4,13 @@ Gazebo Harmonic worlds for the INNEX-1 rover, based on the Lunabotics arena.
 
 ## World
 
-`moon_yard` has a terrain mesh with three craters, nine rocks, walls, zone markers and the AprilTag beacon.
+`moon_yard` has a terrain mesh, craters, rocks, walls, zone markers and the AprilTag beacon.
 
 The world uses the `gz-sim-physics-system`, sensors (ogre2) and IMU systems. The launch file spawns the INNEX-1 rover from `innex_description` into the start zone.
 
 ## Launch
 
-[Build and source the workspace](../../ONBOARDING.md#5-build-the-workspace-and-run-the-sim), then run one of these commands.
+[Build and source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation), then run one of these commands.
 
 ```bash
 ros2 launch innex_sim moon_yard.launch.py
@@ -19,7 +19,7 @@ ros2 launch innex_sim moon_yard.launch.py gui:=false
 
 The launch file also starts `robot_state_publisher`, spawns the rover and starts a `ros_gz_bridge` configured by `config/bridge.yaml`.
 
-To run the world without ROS, [source the workspace](../../ONBOARDING.md#5-build-the-workspace-and-run-the-sim) so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
+To run the world without ROS, [source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation) so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
 
 ## Rover
 
@@ -29,7 +29,7 @@ The rover spawns at the centre of the start zone, facing east. Set the spawn pos
 ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
 ```
 
-The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.3 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.6 rad/s². These are starting values until the wheel test on blocks (INX-142) measures the real rover.
+The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.3 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.6 rad/s². These are starting values until a wheel test on blocks measures the real rover.
 
 The `/odom` topic starts at zero where the rover spawns, so it's relative to the spawn pose, not the arena frame.
 
