@@ -34,7 +34,7 @@ Each layer that can fail must be able to stop the rover.
 
 On a fault, the outputs stop. They do not hold the last value. A watchdog is a timer that expects regular input and acts when the input stops. Do not lengthen or remove a timeout. See [Rover safety](../safety.md#during-a-run).
 
-The sim works differently. Gazebo's `DiffDrive` plugin has no command timeout. It keeps the last command until a new one arrives, so a stopped publisher does not stop the sim rover. See [Simulation](simulation.md).
+The sim models layer 2. Gazebo's `DiffDrive` plugin has no command timeout, so a node in the sim sends zero if no command arrives for 500 ms. See [Simulation](simulation.md#the-gazebo-drive-plugin).
 
 ## Old commands must not arrive late
 

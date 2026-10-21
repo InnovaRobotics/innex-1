@@ -49,7 +49,7 @@ The model starts rough. It has a box chassis, four wheels and estimated masses. 
 
 ## The Gazebo drive plugin
 
-Gazebo's `DiffDrive` plugin drives the four wheels as a skid steer. It has no command timeout. It keeps the last command until a new command arrives. The [innex_sim README](../../src/innex_sim/README.md#rover) gives the speed and acceleration limits.
+Gazebo's `DiffDrive` plugin drives the four wheels as a skid steer. It has no command timeout. It keeps the last command until a new command arrives. So the sim runs a watchdog node between `/cmd_vel` and Gazebo. It sends zero if no command arrives for 500 ms, as the bridge on the Jetson does. The innex_sim README explains [the watchdog](../../src/innex_sim/README.md#when-commands-stop) and gives [the speed and acceleration limits](../../src/innex_sim/README.md#rover).
 
 ## Real-time factor
 

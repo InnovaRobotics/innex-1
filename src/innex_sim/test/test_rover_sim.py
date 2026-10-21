@@ -9,6 +9,7 @@ from typing import NamedTuple
 import pytest
 import rclpy
 from geometry_msgs.msg import TwistStamped
+from nav_msgs.msg import Odometry
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.time import Time
 from tf2_ros import Buffer, TransformListener
@@ -23,6 +24,11 @@ COMMAND_RATE = 10.0
 WHEELBASE = 0.705
 TRACK = 0.614
 OPEN_GROUND = (5.6, 2.3)
+# The rover must start to stop this long after the last command (INX-155).
+STOP_TIMEOUT = 0.5
+STOP_TEST_SPEED = 0.25
+# DiffDrive limits slowing down in reverse to 0.3 m/s² (innex_1.gazebo.xacro).
+REVERSE_BRAKING = 0.3
 
 
 class Sim(NamedTuple):
@@ -82,7 +88,7 @@ def drive(env, linear_x, duration, angular_z=0.0):
     command = TwistStamped()
     command.header.frame_id = 'base_link'
     try:
-        wait_for(publisher.get_subscription_count, SPAWN_TIMEOUT, 'the bridge did not subscribe')
+        wait_for(publisher.get_subscription_count, SPAWN_TIMEOUT, 'nothing subscribed to /cmd_vel')
         command.twist.linear.x = linear_x
         command.twist.angular.z = angular_z
         deadline = time.monotonic() + duration
@@ -190,6 +196,68 @@ def test_rover_drives_forward(sim):
     end = read_pose(sim.env)
     assert 0.45 <= end[0] - start[0] <= 0.72
     assert abs(end[1] - start[1]) < 0.1
+
+
+def test_rover_stops_when_commands_stop(sim):
+    """Kill the command publisher mid-drive, as if teleop crashed, and check that the rover stops."""
+    context = rclpy.Context()
+    rclpy.init(context=context, domain_id=int(sim.env['ROS_DOMAIN_ID']))
+    node = rclpy.create_node('test_stop_watcher', context=context)
+    executor = SingleThreadedExecutor(context=context)
+    executor.add_node(node)
+    odometry = []
+    commands = []
+    node.create_subscription(
+        Odometry, '/odom',
+        lambda message: odometry.append((time.monotonic(), message.twist.twist.linear.x,
+                                         message.pose.pose.position)), 10)
+    # The commands that reach Gazebo.
+    node.create_subscription(
+        TwistStamped, '/cmd_vel_watchdog/cmd_vel',
+        lambda message: commands.append((time.monotonic(), message.twist.linear.x)), 10)
+
+    def spin(duration):
+        deadline = time.monotonic() + duration
+        while time.monotonic() < deadline:
+            executor.spin_once(timeout_sec=0.005)
+
+    # Reverse, so the rover stays in the start zone, clear of the rock to the east.
+    publisher = subprocess.Popen(
+        ['ros2', 'topic', 'pub', '--rate', str(COMMAND_RATE), '/cmd_vel',
+         'geometry_msgs/msg/TwistStamped',
+         f'{{header: {{frame_id: base_link}}, twist: {{linear: {{x: {-STOP_TEST_SPEED}}}}}}}'],
+        env=sim.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        deadline = time.monotonic() + SPAWN_TIMEOUT
+        while not odometry or odometry[-1][1] > -0.95 * STOP_TEST_SPEED:
+            if time.monotonic() > deadline:
+                pytest.fail('the rover did not reach the test speed')
+            spin(0.1)
+        spin(0.5)
+        # SIGKILL, so the publisher cannot send a last zero command.
+        killed = time.monotonic()
+        os.killpg(publisher.pid, signal.SIGKILL)
+        publisher.wait(timeout=CLI_TIMEOUT)
+        spin(STOP_TIMEOUT + STOP_TEST_SPEED / REVERSE_BRAKING + 2.0)
+    finally:
+        if publisher.poll() is None:
+            os.killpg(publisher.pid, signal.SIGKILL)
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown(context=context)
+
+    stopped = [t for t, speed, _ in odometry if t > killed and abs(speed) < 0.01]
+    assert stopped, 'the rover kept driving after the commands stopped'
+    assert stopped[0] - killed <= STOP_TIMEOUT + STOP_TEST_SPEED / REVERSE_BRAKING + 0.5
+
+    last_second = [position for t, _, position in odometry if t > odometry[-1][0] - 1.0]
+    assert math.dist((last_second[0].x, last_second[0].y),
+                     (last_second[-1].x, last_second[-1].y)) < 0.005
+
+    last_command = max(t for t, linear_x in commands if linear_x)
+    zeros = [t for t, linear_x in commands if t > last_command]
+    assert zeros, 'no zero command reached Gazebo'
+    assert zeros[0] - last_command <= STOP_TIMEOUT + 0.1
 
 
 def test_rover_turns_as_far_as_its_odometry_says(sim):

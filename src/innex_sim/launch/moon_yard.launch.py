@@ -2,7 +2,8 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction,
+                            Shutdown)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -35,12 +36,21 @@ def generate_launch_description():
             'yaw', default_value='0.0',
             description='Rover heading in radians. 0 faces east, towards the excavation zone.'),
         OpaqueFunction(function=launch_gazebo),
+        # Gazebo keeps the last command it received. If the watchdog or the bridge exits, stop the
+        # whole simulation, so the rover cannot keep driving on that command.
+        Node(
+            package='innex_sim',
+            executable='cmd_vel_watchdog',
+            output='screen',
+            on_exit=Shutdown(),
+        ),
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
             parameters=[{'config_file': os.path.join(
                 get_package_share_directory('innex_sim'), 'config', 'bridge.yaml')}],
             output='screen',
+            on_exit=Shutdown(),
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
