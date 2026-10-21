@@ -223,13 +223,23 @@ def test_rover_stops_when_commands_stop(sim):
         while time.monotonic() < deadline:
             executor.spin_once(timeout_sec=0.005)
 
-    # Reverse, so the rover stays in the start zone, clear of the rock to the east.
-    publisher = subprocess.Popen(
-        ['ros2', 'topic', 'pub', '--rate', str(COMMAND_RATE), '/cmd_vel',
-         'geometry_msgs/msg/TwistStamped',
-         f'{{header: {{frame_id: base_link}}, twist: {{linear: {{x: {-STOP_TEST_SPEED}}}}}}}'],
-        env=sim.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    publisher = None
     try:
+        # The watchdog sends zero every 0.5 s while nothing drives. Wait for one, so this node is
+        # connected to the watchdog before the drive starts.
+        deadline = time.monotonic() + SPAWN_TIMEOUT
+        while not commands:
+            if time.monotonic() > deadline:
+                pytest.fail('no command from cmd_vel_watchdog')
+            spin(0.1)
+
+        # Reverse, so the rover stays in the start zone, clear of the rock to the east.
+        publisher = subprocess.Popen(
+            ['ros2', 'topic', 'pub', '--rate', str(COMMAND_RATE), '/cmd_vel',
+             'geometry_msgs/msg/TwistStamped',
+             f'{{header: {{frame_id: base_link}}, twist: {{linear: {{x: {-STOP_TEST_SPEED}}}}}}}'],
+            env=sim.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True)
         deadline = time.monotonic() + SPAWN_TIMEOUT
         while not odometry or odometry[-1][1] > -0.95 * STOP_TEST_SPEED:
             if time.monotonic() > deadline:
@@ -243,7 +253,7 @@ def test_rover_stops_when_commands_stop(sim):
         publisher.wait(timeout=CLI_TIMEOUT)
         spin(STOP_TIMEOUT + STOP_TEST_SPEED / REVERSE_BRAKING + 2.0)
     finally:
-        if publisher.poll() is None:
+        if publisher is not None and publisher.poll() is None:
             os.killpg(publisher.pid, signal.SIGKILL)
         executor.shutdown()
         node.destroy_node()
@@ -257,10 +267,11 @@ def test_rover_stops_when_commands_stop(sim):
     assert math.dist((last_second[0].x, last_second[0].y),
                      (last_second[-1].x, last_second[-1].y)) < 0.005
 
-    last_command = max(t for t, linear_x in commands if linear_x)
-    zeros = [t for t, linear_x in commands if t > last_command]
+    driving = [t for t, linear_x in commands if linear_x]
+    assert driving, 'no drive command reached Gazebo'
+    zeros = [t for t, _ in commands if t > driving[-1]]
     assert zeros, 'no zero command reached Gazebo'
-    assert zeros[0] - last_command <= STOP_TIMEOUT + TIMING_ALLOWANCE
+    assert zeros[0] - driving[-1] <= STOP_TIMEOUT + TIMING_ALLOWANCE
 
 
 def test_rover_turns_as_far_as_its_odometry_says(sim):
