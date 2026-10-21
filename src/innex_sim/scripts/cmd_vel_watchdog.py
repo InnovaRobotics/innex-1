@@ -6,6 +6,8 @@ on the Jetson sends zero when no /cmd_vel arrives for 500 ms (INX-140). This nod
 for the sim. It forwards each /cmd_vel to Gazebo, and sends zero when commands stop.
 """
 
+import signal
+
 import rclpy
 from geometry_msgs.msg import TwistStamped
 from rclpy.clock import Clock, ClockType
@@ -61,6 +63,9 @@ def main():
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # Ctrl+C in a launch terminal sends SIGINT twice: once from the terminal, once from launch.
+        # Ignore the second, so it can't interrupt the clean-up. Launch still escalates to SIGTERM.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 
