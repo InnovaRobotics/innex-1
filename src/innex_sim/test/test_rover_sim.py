@@ -29,6 +29,8 @@ STOP_TIMEOUT = 0.5
 STOP_TEST_SPEED = 0.25
 # DiffDrive limits slowing down in reverse to 0.3 m/s² (innex_1.gazebo.xacro).
 REVERSE_BRAKING = 0.3
+# Allowance for the timer and for message delivery on one loaded machine.
+TIMING_ALLOWANCE = 0.1
 
 
 class Sim(NamedTuple):
@@ -233,7 +235,8 @@ def test_rover_stops_when_commands_stop(sim):
             if time.monotonic() > deadline:
                 pytest.fail('the rover did not reach the test speed')
             spin(0.1)
-        spin(0.5)
+        # Keep the drive short, so the rover stays clear of the west wall when this test runs alone.
+        spin(0.2)
         # SIGKILL, so the publisher cannot send a last zero command.
         killed = time.monotonic()
         os.killpg(publisher.pid, signal.SIGKILL)
@@ -257,7 +260,7 @@ def test_rover_stops_when_commands_stop(sim):
     last_command = max(t for t, linear_x in commands if linear_x)
     zeros = [t for t, linear_x in commands if t > last_command]
     assert zeros, 'no zero command reached Gazebo'
-    assert zeros[0] - last_command <= STOP_TIMEOUT + 0.1
+    assert zeros[0] - last_command <= STOP_TIMEOUT + TIMING_ALLOWANCE
 
 
 def test_rover_turns_as_far_as_its_odometry_says(sim):

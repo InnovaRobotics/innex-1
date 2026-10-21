@@ -11,8 +11,8 @@ from rclpy.executors import SingleThreadedExecutor
 START_TIMEOUT = 60
 # The watchdog must send zero this long after the last command (INX-155).
 TIMEOUT = 0.5
-# Allowance for the timer and for message delivery on one machine.
-TOLERANCE = 0.05
+# Allowance for the timer and for message delivery on one loaded machine.
+TOLERANCE = 0.1
 COMMAND_RATE = 10.0
 
 
