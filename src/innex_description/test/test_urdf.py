@@ -75,12 +75,19 @@ def test_oak_d_pro_cameras(robot):
     joints = {joint.get('name'): joint for joint in robot.findall('joint')}
 
     for prefix in ('oak_front', 'oak_rear'):
+        assert f'{prefix}_mount_frame' in links
         assert f'{prefix}_frame' in links
         assert f'{prefix}_rgb_camera_optical_frame' in links
 
+        mount_joint = joints[f'{prefix}_mount_joint']
+        assert mount_joint.find('parent').get('link') == 'chassis'
+        assert mount_joint.find('child').get('link') == f'{prefix}_mount_frame'
+
         joint = joints[f'{prefix}_joint']
-        assert joint.find('parent').get('link') == 'chassis'
+        assert joint.find('parent').get('link') == f'{prefix}_mount_frame'
         assert joint.find('child').get('link') == f'{prefix}_frame'
+        pitch = floats(joint.find('origin').get('rpy'))[1]
+        assert pitch == pytest.approx(15 * 3.14159265 / 180, abs=1e-3)
 
         optical_joint = joints[f'{prefix}_optical_joint']
         assert optical_joint.find('parent').get('link') == f'{prefix}_frame'

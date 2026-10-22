@@ -120,12 +120,15 @@
 
   <xacro:include filename="sensors/oak_d_pro.xacro"/>
 
+  <!-- Downward camera pitch (15 deg) covers near ground while keeping beacon in view -->
+  <xacro:property name="camera_pitch" value="${15 * pi / 180}"/>
+
   <!-- Front and rear OAK-D Pro cameras -->
-  <xacro:oak_d_pro prefix="oak_front" parent="chassis">
+  <xacro:oak_d_pro prefix="oak_front" parent="chassis" pitch="${camera_pitch}">
     <origin xyz="${chassis_length / 2 + 0.01 + 0.023 / 2} 0 0.05" rpy="0 0 0"/>
   </xacro:oak_d_pro>
 
-  <xacro:oak_d_pro prefix="oak_rear" parent="chassis">
+  <xacro:oak_d_pro prefix="oak_rear" parent="chassis" pitch="${camera_pitch}">
     <origin xyz="${-chassis_length / 2 - 0.01 - 0.023 / 2} 0 0.05" rpy="0 0 ${pi}"/>
   </xacro:oak_d_pro>
 

@@ -2,18 +2,27 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
   <!-- Luxonis OAK-D Pro active stereo camera macro -->
-  <xacro:macro name="oak_d_pro" params="prefix parent *origin topic_prefix:='' horizontal_fov:=1.2043 width:=640 height:=400 rate:=15.0">
+  <xacro:macro name="oak_d_pro" params="prefix parent *origin pitch:=0.0 topic_prefix:='' horizontal_fov:=1.2043 width:=640 height:=400 rate:=15.0">
     <xacro:property name="camera_mass" value="0.091"/>
     <xacro:property name="camera_x" value="0.023"/>
     <xacro:property name="camera_y" value="0.097"/>
     <xacro:property name="camera_z" value="0.030"/>
     <xacro:property name="actual_topic_prefix" value="${topic_prefix if topic_prefix else prefix}"/>
 
-    <!-- Mechanical / base mount joint and link -->
-    <joint name="${prefix}_joint" type="fixed">
+    <!-- Mechanical mount joint and link -->
+    <joint name="${prefix}_mount_joint" type="fixed">
       <parent link="${parent}"/>
-      <child link="${prefix}_frame"/>
+      <child link="${prefix}_mount_frame"/>
       <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${prefix}_mount_frame"/>
+
+    <!-- Camera body joint tilted down by pitch parameter -->
+    <joint name="${prefix}_joint" type="fixed">
+      <parent link="${prefix}_mount_frame"/>
+      <child link="${prefix}_frame"/>
+      <origin xyz="0 0 0" rpy="0 ${pitch} 0"/>
     </joint>
 
     <link name="${prefix}_frame">
