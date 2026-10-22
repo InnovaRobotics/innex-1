@@ -122,6 +122,18 @@ def test_joint_states_has_wheel_joints(sim):
         assert joint in names
 
 
+def test_front_camera_publishes(sim):
+    topic = '/oak_front/rgb/image_raw'
+    frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
+    assert frame_id == 'oak_front_rgb_camera_optical_frame'
+
+
+def test_rear_camera_publishes(sim):
+    topic = '/oak_rear/rgb/image_raw'
+    frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
+    assert frame_id == 'oak_rear_rgb_camera_optical_frame'
+
+
 def test_odom_to_base_link_transform(sim):
     context = rclpy.Context()
     rclpy.init(context=context, domain_id=int(sim.env['ROS_DOMAIN_ID']))

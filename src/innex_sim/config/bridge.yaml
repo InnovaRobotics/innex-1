@@ -28,3 +28,28 @@
   ros_type_name: sensor_msgs/msg/JointState
   gz_type_name: gz.msgs.Model
   direction: GZ_TO_ROS
+
+- ros_topic_name: /oak_front/rgb/image_raw
+  gz_topic_name: /oak_front/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /oak_front/rgb/camera_info
+  gz_topic_name: /oak_front/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /oak_rear/rgb/image_raw
+  gz_topic_name: /oak_rear/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /oak_rear/rgb/camera_info
+  gz_topic_name: /oak_rear/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
