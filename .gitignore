@@ -24,7 +24,6 @@ __pycache__/
 .envrc
 tasks/
 *.log
-*.bat
 
 # Data: bags and evidence live in OneDrive, never in git
 bags/

@@ -136,7 +136,7 @@
 
   <!-- Ouster OS1-128 LiDAR mounted on front-top chassis -->
   <xacro:ouster_os1 prefix="os_sensor" parent="chassis">
-    <origin xyz="0.20 0 ${chassis_height / 2 + 0.0583 / 2}" rpy="0 0 0"/>
+    <origin xyz="0.20 0 ${chassis_height / 2}" rpy="0 0 0"/>
   </xacro:ouster_os1>
 
   <xacro:include filename="innex_1.gazebo.xacro"/>

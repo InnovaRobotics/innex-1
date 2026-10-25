@@ -16,32 +16,26 @@
 
     <link name="${prefix}">
       <visual>
+        <origin xyz="0 0 ${sensor_height / 2}" rpy="0 0 0"/>
         <geometry>
           <cylinder radius="${sensor_radius}" length="${sensor_height}"/>
         </geometry>
         <material name="carbon"/>
       </visual>
       <collision>
+        <origin xyz="0 0 ${sensor_height / 2}" rpy="0 0 0"/>
         <geometry>
           <cylinder radius="${sensor_radius}" length="${sensor_height}"/>
         </geometry>
       </collision>
       <inertial>
+        <origin xyz="0 0 ${sensor_height / 2}" rpy="0 0 0"/>
         <mass value="${sensor_mass}"/>
         <inertia ixx="${sensor_mass * (3 * sensor_radius * sensor_radius + sensor_height * sensor_height) / 12}" ixy="0" ixz="0"
                  iyy="${sensor_mass * (3 * sensor_radius * sensor_radius + sensor_height * sensor_height) / 12}" iyz="0"
                  izz="${sensor_mass * sensor_radius * sensor_radius / 2}"/>
       </inertial>
     </link>
-
-    <!-- Optical beam center frame (os_lidar) -->
-    <joint name="${prefix}_lidar_joint" type="fixed">
-      <parent link="${prefix}"/>
-      <child link="os_lidar"/>
-      <origin xyz="0 0 0.03618" rpy="0 0 0"/>
-    </joint>
-
-    <link name="os_lidar"/>
 
     <!-- Gazebo Harmonic GPU LiDAR Sensor -->
     <gazebo reference="${prefix}">
