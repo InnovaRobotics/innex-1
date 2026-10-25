@@ -132,6 +132,13 @@
     <origin xyz="${-chassis_length / 2 - 0.01 - 0.023 / 2} 0 0.05" rpy="0 0 ${pi}"/>
   </xacro:oak_d_pro>
 
+  <xacro:include filename="sensors/ouster_os1.xacro"/>
+
+  <!-- Ouster OS1-128 LiDAR mounted on front-top chassis -->
+  <xacro:ouster_os1 prefix="os_sensor" parent="chassis">
+    <origin xyz="0.20 0 ${chassis_height / 2}" rpy="0 0 0"/>
+  </xacro:ouster_os1>
+
   <xacro:include filename="innex_1.gazebo.xacro"/>
 
 </robot>
