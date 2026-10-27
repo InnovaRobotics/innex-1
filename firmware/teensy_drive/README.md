@@ -74,6 +74,9 @@ implementation.
 
 ## Remaining work and acceptance
 
+This prototype relates to firmware issue INX-144. INX-144 remains open until the
+required bench test with the wheels off the ground has passed.
+
 - Agree the protocol with the INX-140 owner. The Python encoder is an integration
   starting point; this directory does not implement the ROS bridge.
 - Add session and freshness handling to reject queued commands after a restart;
