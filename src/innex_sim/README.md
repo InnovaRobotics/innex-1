@@ -6,7 +6,7 @@ Gazebo Harmonic worlds for the INNEX-1 rover, based on the Lunabotics arena.
 
 `moon_yard` has a terrain mesh, craters, rocks, walls, zone markers and the AprilTag beacon.
 
-The world uses the `gz-sim-physics-system`, sensors (ogre2) and IMU systems. The launch file spawns the INNEX-1 rover from `innex_description` into the start zone.
+The world uses the `gz-sim-physics-system` configured with the DART engine (`dantzig` LCP solver, ODE collision detector, 4 ms step size), sensors (ogre2) and IMU systems. The launch file spawns the INNEX-1 rover from `innex_description` into the start zone.
 
 ## Launch
 

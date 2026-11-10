@@ -213,3 +213,11 @@ def test_rover_holds_with_a_wheel_on_a_crater_slope(sim):
     end = read_pose(sim.env)
     assert math.hypot(end[3], end[4]) > 0.02, 'no wheel is on the slope'
     assert math.hypot(end[0] - x, end[1] - y) < 0.02
+
+
+def test_rover_holds_position_when_stopped(sim):
+    start = read_pose(sim.env)
+    time.sleep(2.0)
+    end = read_pose(sim.env)
+    assert abs(end[0] - start[0]) < 0.01
+    assert abs(end[1] - start[1]) < 0.01
