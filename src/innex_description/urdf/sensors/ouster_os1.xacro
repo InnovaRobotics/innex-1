@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
+
+  <!-- Ouster OS1-128 LiDAR macro -->
+  <xacro:macro name="ouster_os1" params="prefix:=os_sensor parent:=chassis *origin topic:=ouster samples:=512 channels:=128 rate:=10.0 min_range:=0.5 max_range:=100.0">
+    <xacro:property name="sensor_mass" value="0.455"/>
+    <xacro:property name="sensor_radius" value="0.0425"/>
+    <xacro:property name="sensor_height" value="0.0583"/>
+
+    <!-- Base mounting link and joint -->
+    <joint name="${prefix}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${prefix}"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${prefix}">
+      <visual>
+        <origin xyz="0 0 ${sensor_height / 2}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${sensor_radius}" length="${sensor_height}"/>
+        </geometry>
+        <material name="carbon"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${sensor_height / 2}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${sensor_radius}" length="${sensor_height}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 ${sensor_height / 2}" rpy="0 0 0"/>
+        <mass value="${sensor_mass}"/>
+        <inertia ixx="${sensor_mass * (3 * sensor_radius * sensor_radius + sensor_height * sensor_height) / 12}" ixy="0" ixz="0"
+                 iyy="${sensor_mass * (3 * sensor_radius * sensor_radius + sensor_height * sensor_height) / 12}" iyz="0"
+                 izz="${sensor_mass * sensor_radius * sensor_radius / 2}"/>
+      </inertial>
+    </link>
+
+    <!-- Gazebo Harmonic GPU LiDAR Sensor -->
+    <gazebo reference="${prefix}">
+      <sensor name="${prefix}" type="gpu_lidar">
+        <gz_frame_id>${prefix}</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>${rate}</update_rate>
+        <visualize>false</visualize>
+        <topic>${topic}</topic>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>${samples}</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159265</min_angle>
+              <max_angle>3.14159265</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>${channels}</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.3699</min_angle>
+              <max_angle>0.3699</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>${min_range}</min>
+            <max>${max_range}</max>
+            <resolution>0.01</resolution>
+          </range>
+        </lidar>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+</robot>

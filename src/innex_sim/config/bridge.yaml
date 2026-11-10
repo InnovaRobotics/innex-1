@@ -53,3 +53,10 @@
   gz_type_name: gz.msgs.CameraInfo
   direction: GZ_TO_ROS
 
+- ros_topic_name: /ouster/points
+  gz_topic_name: /ouster/points
+  ros_type_name: sensor_msgs/msg/PointCloud2
+  gz_type_name: gz.msgs.PointCloudPacked
+  direction: GZ_TO_ROS
+
+
