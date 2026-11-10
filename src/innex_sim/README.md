@@ -31,6 +31,8 @@ ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
 
 The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.3 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.6 rad/s². These are starting values until a wheel test on blocks measures the real rover.
 
+The wheels have dry friction with no slip compliance, so the rover holds its position on a slope and when it stands still. The friction coefficient is 1 in the rolling direction and 0.5 along the axle. A skid steer drags its wheels sideways to turn, and the lower sideways friction lets the wheels drag. The model's mass sits forward of the wheel centre, so the rover turns on the spot about its front axle. It turns 3 to 4 per cent less than the wheel odometry reports.
+
 The `/odom` topic starts at zero where the rover spawns, so it's relative to the spawn pose, not the arena frame.
 
 Drive the rover by publishing `geometry_msgs/msg/TwistStamped` on `/cmd_vel`. `DiffDrive` has no command timeout, so the rover keeps the last command until a new one arrives.

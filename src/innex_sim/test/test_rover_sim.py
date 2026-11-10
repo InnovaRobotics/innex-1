@@ -1,3 +1,4 @@
+import math
 import os
 import re
 import signal
@@ -12,13 +13,16 @@ from rclpy.executors import SingleThreadedExecutor
 from rclpy.time import Time
 from tf2_ros import Buffer, TransformListener
 
-from helpers import START_ZONE
+from helpers import CRATERS, START_ZONE
 
 SPAWN_TIMEOUT = 120
 CLI_TIMEOUT = 60
 WHEEL_JOINTS = ('front_left_wheel_joint', 'front_right_wheel_joint',
                 'rear_left_wheel_joint', 'rear_right_wheel_joint')
 COMMAND_RATE = 10.0
+WHEELBASE = 0.705
+TRACK = 0.614
+OPEN_GROUND = (5.6, 2.3)
 
 
 class Sim(NamedTuple):
@@ -52,7 +56,25 @@ def echo_once(env, topic, field):
     return wait_for(attempt, SPAWN_TIMEOUT, f'no message on {topic}').stdout
 
 
-def drive(env, linear_x, duration):
+def place_rover(env, x, y):
+    request = f'name: "innex_1", position: {{x: {x}, y: {y}, z: 0.05}}, orientation: {{w: 1}}'
+    subprocess.run(['gz', 'service', '-s', '/world/moon_yard/set_pose',
+                    '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
+                    '--timeout', '5000', '--req', request],
+                   env=env, check=True, capture_output=True, timeout=CLI_TIMEOUT)
+
+
+def odom_yaw(env):
+    text = echo_once(env, '/odom', 'pose.pose.orientation')
+    z, w = (float(re.search(rf'^{axis}: (\S+)', text, re.MULTILINE).group(1)) for axis in 'zw')
+    return 2.0 * math.atan2(z, w)
+
+
+def angle_between(start, end):
+    return (end - start + math.pi) % (2.0 * math.pi) - math.pi
+
+
+def drive(env, linear_x, duration, angular_z=0.0):
     context = rclpy.Context()
     rclpy.init(context=context, domain_id=int(env['ROS_DOMAIN_ID']))
     node = rclpy.create_node('test_driver', context=context)
@@ -62,12 +84,14 @@ def drive(env, linear_x, duration):
     try:
         wait_for(publisher.get_subscription_count, SPAWN_TIMEOUT, 'the bridge did not subscribe')
         command.twist.linear.x = linear_x
+        command.twist.angular.z = angular_z
         deadline = time.monotonic() + duration
         while time.monotonic() < deadline:
             publisher.publish(command)
             time.sleep(1.0 / COMMAND_RATE)
     finally:
         command.twist.linear.x = 0.0
+        command.twist.angular.z = 0.0
         publisher.publish(command)
         time.sleep(1.0 / COMMAND_RATE)
         node.destroy_node()
@@ -166,3 +190,26 @@ def test_rover_drives_forward(sim):
     end = read_pose(sim.env)
     assert 0.45 <= end[0] - start[0] <= 0.72
     assert abs(end[1] - start[1]) < 0.1
+
+
+def test_rover_turns_as_far_as_its_odometry_says(sim):
+    place_rover(sim.env, *OPEN_GROUND)
+    time.sleep(2.0)
+    truth_start, odom_start = read_pose(sim.env)[5], odom_yaw(sim.env)
+    drive(sim.env, 0.0, 4.0, angular_z=0.4)
+    time.sleep(2.0)
+    truth = angle_between(truth_start, read_pose(sim.env)[5])
+    odom = angle_between(odom_start, odom_yaw(sim.env))
+    assert odom > 0.5
+    assert truth == pytest.approx(odom, rel=0.1)
+
+
+def test_rover_holds_with_a_wheel_on_a_crater_slope(sim):
+    crater = CRATERS[1]
+    x = crater.x - WHEELBASE / 2
+    y = crater.y + crater.diameter / 4 - TRACK / 2
+    place_rover(sim.env, x, y)
+    time.sleep(8.0)
+    end = read_pose(sim.env)
+    assert math.hypot(end[3], end[4]) > 0.02, 'no wheel is on the slope'
+    assert math.hypot(end[0] - x, end[1] - y) < 0.02

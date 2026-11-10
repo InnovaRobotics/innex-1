@@ -6,6 +6,8 @@
   <xacro:property name="max_acceleration" value="0.3"/>
   <xacro:property name="max_deceleration" value="0.5"/>
   <xacro:property name="max_angular_acceleration" value="0.6"/>
+  <xacro:property name="lateral_friction" value="0.5"/>
+  <xacro:property name="rolling_direction_friction" value="1"/>
 
   <xacro:macro name="wheel_friction" params="name">
     <gazebo reference="${name}_wheel">
@@ -13,10 +15,8 @@
         <surface>
           <friction>
             <ode>
-              <mu>1</mu>
-              <mu2>1</mu2>
-              <slip1>0.004</slip1>
-              <slip2>0</slip2>
+              <mu>${lateral_friction}</mu>
+              <mu2>${rolling_direction_friction}</mu2>
               <fdir1 gz:expressed_in="${name}_wheel">0 1 0</fdir1>
             </ode>
           </friction>
