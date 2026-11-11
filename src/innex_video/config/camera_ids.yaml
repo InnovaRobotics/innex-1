@@ -1,0 +1,9 @@
+front_video_relay:
+  ros__parameters:
+    # Enter the front OAK camera's DepthAI deviceId here.
+    device_id: ''
+
+rear_video_relay:
+  ros__parameters:
+    # Enter the rear OAK camera's DepthAI deviceId here.
+    device_id: ''

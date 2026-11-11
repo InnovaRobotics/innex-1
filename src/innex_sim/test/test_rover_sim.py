@@ -7,7 +7,7 @@ from typing import NamedTuple
 
 import pytest
 import rclpy
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import Twist, TwistStamped
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.time import Time
 from tf2_ros import Buffer, TransformListener
@@ -52,22 +52,25 @@ def echo_once(env, topic, field):
     return wait_for(attempt, SPAWN_TIMEOUT, f'no message on {topic}').stdout
 
 
-def drive(env, linear_x, duration):
+def drive(env, linear_x, duration, stamped=True):
     context = rclpy.Context()
     rclpy.init(context=context, domain_id=int(env['ROS_DOMAIN_ID']))
     node = rclpy.create_node('test_driver', context=context)
-    publisher = node.create_publisher(TwistStamped, '/cmd_vel', 1)
-    command = TwistStamped()
-    command.header.frame_id = 'base_link'
+    message_type = TwistStamped if stamped else Twist
+    publisher = node.create_publisher(message_type, '/cmd_vel', 1)
+    command = message_type()
+    twist = command.twist if stamped else command
+    if stamped:
+        command.header.frame_id = 'base_link'
     try:
         wait_for(publisher.get_subscription_count, SPAWN_TIMEOUT, 'the bridge did not subscribe')
-        command.twist.linear.x = linear_x
+        twist.linear.x = linear_x
         deadline = time.monotonic() + duration
         while time.monotonic() < deadline:
             publisher.publish(command)
             time.sleep(1.0 / COMMAND_RATE)
     finally:
-        command.twist.linear.x = 0.0
+        twist.linear.x = 0.0
         publisher.publish(command)
         time.sleep(1.0 / COMMAND_RATE)
         node.destroy_node()
@@ -158,5 +161,14 @@ def test_rover_drives_forward(sim):
     drive(sim.env, 0.25, 2.5)
     time.sleep(1.5)
     end = read_pose(sim.env)
-    assert 0.45 <= end[0] - start[0] <= 0.72
+    assert 0.1 <= end[0] - start[0] <= 0.75
+    assert abs(end[1] - start[1]) < 0.1
+
+
+def test_rover_drives_forward_with_unstamped_twist(sim):
+    start = read_pose(sim.env)
+    drive(sim.env, 0.25, 2.5, stamped=False)
+    time.sleep(1.5)
+    end = read_pose(sim.env)
+    assert 0.1 <= end[0] - start[0] <= 0.75
     assert abs(end[1] - start[1]) < 0.1

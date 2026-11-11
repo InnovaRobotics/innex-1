@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
-  <xacro:property name="max_speed" value="0.4"/>
-  <xacro:property name="max_turn_rate" value="0.8"/>
-  <xacro:property name="max_acceleration" value="0.3"/>
+  <xacro:property name="max_speed" value="0.6"/>
+  <xacro:property name="max_turn_rate" value="1.2"/>
+  <xacro:property name="max_acceleration" value="0.5"/>
   <xacro:property name="max_deceleration" value="0.5"/>
-  <xacro:property name="max_angular_acceleration" value="0.6"/>
+  <xacro:property name="max_angular_acceleration" value="0.8"/>
 
   <xacro:macro name="wheel_friction" params="name">
     <gazebo reference="${name}_wheel">

@@ -17,7 +17,9 @@ ros2 launch innex_sim moon_yard.launch.py
 ros2 launch innex_sim moon_yard.launch.py gui:=false
 ```
 
-The launch file also starts `robot_state_publisher`, spawns the rover and starts a `ros_gz_bridge` configured by `config/bridge.yaml`.
+The launch file starts `robot_state_publisher`, spawns the rover, starts the `ros_gz_bridge` configured by `config/bridge.yaml`, and relays the simulated front and rear cameras as Foxglove H.264 video. The output topics are `/oak_front/video` and `/oak_rear/video`. Foxglove Bridge listens on port `8765`.
+
+The image relay uses PyAV; install Ubuntu's `python3-av` package if it is not already available.
 
 To run the world without ROS, [source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation) so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
 
@@ -29,15 +31,25 @@ The rover spawns at the centre of the start zone, facing east. Set the spawn pos
 ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
 ```
 
-The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.3 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.6 rad/s². These are starting values until a wheel test on blocks measures the real rover.
+The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.6 m/s and 1.2 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.5 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.8 rad/s². These are simulation values; they do not change the real rover's limits.
 
 The `/odom` topic starts at zero where the rover spawns, so it's relative to the spawn pose, not the arena frame.
 
-Drive the rover by publishing `geometry_msgs/msg/TwistStamped` on `/cmd_vel`. `DiffDrive` has no command timeout, so the rover keeps the last command until a new one arrives.
+Drive the rover by publishing `geometry_msgs/msg/Twist` or `geometry_msgs/msg/TwistStamped` on `/cmd_vel`. `DiffDrive` has no command timeout, so the rover keeps the last command until a new one arrives.
+
+### Keyboard teleop
+
+Start keyboard teleop from a second sourced terminal. Its default `Twist` messages and the joystick's stamped messages are both bridged from `/cmd_vel`:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args
+```
+
+Use `i` to move forward, `,` to reverse, `j` and `l` to turn, and `k` to stop. Keep the keyboard terminal focused. Gazebo keeps the last velocity until another command arrives, so press `k` after driving.
 
 | ROS topic | Type | Direction | Description |
 |---|---|---|---|
-| `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | to Gazebo | Velocity command. The bridge keeps only the latest command. |
+| `/cmd_vel` | `geometry_msgs/msg/Twist` or `geometry_msgs/msg/TwistStamped` | to Gazebo | Velocity command. The bridge keeps only the latest command. |
 | `/odom` | `nav_msgs/msg/Odometry` | from Gazebo | Wheel odometry in the `odom` frame. |
 | `/tf` | `tf2_msgs/msg/TFMessage` | from Gazebo | The `odom` to `base_link` transform. |
 | `/joint_states` | `sensor_msgs/msg/JointState` | from Gazebo | Wheel joint positions and velocities. |
