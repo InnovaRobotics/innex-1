@@ -2,7 +2,14 @@ cmake_minimum_required(VERSION 3.8)
 project(innex_sim)
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+ament_python_install_package(${PROJECT_NAME})
+
+install(PROGRAMS scripts/sim_video_relay
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 set(MESH_DIR ${CMAKE_CURRENT_BINARY_DIR}/models)
 # List the generated files so CMake knows when to rerun the script.
