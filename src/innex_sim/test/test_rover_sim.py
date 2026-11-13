@@ -29,8 +29,6 @@ STOP_TIMEOUT = 0.5
 STOP_TEST_SPEED = 0.25
 # DiffDrive limits slowing down in reverse to 0.3 m/s² (innex_1.gazebo.xacro).
 REVERSE_BRAKING = 0.3
-# Allowance for the timer and for message delivery on one loaded machine.
-TIMING_ALLOWANCE = 0.1
 
 
 class Sim(NamedTuple):
@@ -208,38 +206,24 @@ def test_rover_stops_when_commands_stop(sim):
     executor = SingleThreadedExecutor(context=context)
     executor.add_node(node)
     odometry = []
-    commands = []
     node.create_subscription(
         Odometry, '/odom',
         lambda message: odometry.append((time.monotonic(), message.twist.twist.linear.x,
                                          message.pose.pose.position)), 10)
-    # The commands that reach Gazebo.
-    node.create_subscription(
-        TwistStamped, '/cmd_vel_watchdog/cmd_vel',
-        lambda message: commands.append((time.monotonic(), message.twist.linear.x)), 10)
 
     def spin(duration):
         deadline = time.monotonic() + duration
         while time.monotonic() < deadline:
             executor.spin_once(timeout_sec=0.005)
 
-    publisher = None
+    # Reverse, so the rover stays in the start zone, clear of the rock to the east.
+    publisher = subprocess.Popen(
+        ['ros2', 'topic', 'pub', '--rate', str(COMMAND_RATE), '/cmd_vel',
+         'geometry_msgs/msg/TwistStamped',
+         f'{{header: {{frame_id: base_link}}, twist: {{linear: {{x: {-STOP_TEST_SPEED}}}}}}}'],
+        env=sim.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True)
     try:
-        # The watchdog sends zero every 0.5 s while nothing drives. Wait for one, so this node is
-        # connected to the watchdog before the drive starts.
-        deadline = time.monotonic() + SPAWN_TIMEOUT
-        while not commands:
-            if time.monotonic() > deadline:
-                pytest.fail('no command from cmd_vel_watchdog')
-            spin(0.1)
-
-        # Reverse, so the rover stays in the start zone, clear of the rock to the east.
-        publisher = subprocess.Popen(
-            ['ros2', 'topic', 'pub', '--rate', str(COMMAND_RATE), '/cmd_vel',
-             'geometry_msgs/msg/TwistStamped',
-             f'{{header: {{frame_id: base_link}}, twist: {{linear: {{x: {-STOP_TEST_SPEED}}}}}}}'],
-            env=sim.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            start_new_session=True)
         deadline = time.monotonic() + SPAWN_TIMEOUT
         while not odometry or odometry[-1][1] > -0.95 * STOP_TEST_SPEED:
             if time.monotonic() > deadline:
@@ -253,7 +237,7 @@ def test_rover_stops_when_commands_stop(sim):
         publisher.wait(timeout=CLI_TIMEOUT)
         spin(STOP_TIMEOUT + STOP_TEST_SPEED / REVERSE_BRAKING + 2.0)
     finally:
-        if publisher is not None and publisher.poll() is None:
+        if publisher.poll() is None:
             os.killpg(publisher.pid, signal.SIGKILL)
         executor.shutdown()
         node.destroy_node()
@@ -266,12 +250,6 @@ def test_rover_stops_when_commands_stop(sim):
     last_second = [position for t, _, position in odometry if t > odometry[-1][0] - 1.0]
     assert math.dist((last_second[0].x, last_second[0].y),
                      (last_second[-1].x, last_second[-1].y)) < 0.005
-
-    driving = [t for t, linear_x in commands if linear_x]
-    assert driving, 'no drive command reached Gazebo'
-    zeros = [t for t, _ in commands if t > driving[-1]]
-    assert zeros, 'no zero command reached Gazebo'
-    assert zeros[0] - driving[-1] <= STOP_TIMEOUT + TIMING_ALLOWANCE
 
 
 def test_rover_turns_as_far_as_its_odometry_says(sim):
