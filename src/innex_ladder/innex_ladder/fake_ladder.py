@@ -1,6 +1,6 @@
 """A pretend bucket ladder that stands in for the real motors."""
 
-from innex_ladder.ladder_rules import ChainState, LadderState, can_run_chain
+from innex_ladder.ladder_rules import can_run_chain, ChainState, LadderState
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
