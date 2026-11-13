@@ -17,7 +17,7 @@ ros2 launch innex_sim moon_yard.launch.py
 ros2 launch innex_sim moon_yard.launch.py gui:=false
 ```
 
-The launch file also starts `robot_state_publisher`, spawns the rover, and starts `cmd_vel_watchdog` and a `ros_gz_bridge` configured by `config/bridge.yaml`. If `cmd_vel_watchdog` or the bridge exits, the launch stops the whole simulation.
+The launch file also starts `robot_state_publisher`, spawns the rover, and starts `cmd_vel_watchdog` and a `ros_gz_bridge` configured by `config/bridge.yaml`. If `cmd_vel_watchdog` or `ros_gz_bridge` exits, the launch stops the whole simulation.
 
 To run the world without ROS, [source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation) so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.
 
@@ -40,7 +40,7 @@ Drive the rover by publishing `geometry_msgs/msg/TwistStamped` on `/cmd_vel`.
 | ROS topic | Type | Direction | Description |
 |---|---|---|---|
 | `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | to `cmd_vel_watchdog` | Velocity command in `base_link`. |
-| `/cmd_vel_watchdog/cmd_vel` | `geometry_msgs/msg/TwistStamped` | to Gazebo | The commands that reach Gazebo. Only `cmd_vel_watchdog` publishes here. The bridge keeps only the latest command. |
+| `/cmd_vel_watchdog/cmd_vel` | `geometry_msgs/msg/TwistStamped` | to Gazebo | The commands that reach Gazebo. Only `cmd_vel_watchdog` publishes here. `ros_gz_bridge` keeps only the latest command. |
 | `/odom` | `nav_msgs/msg/Odometry` | from Gazebo | Wheel odometry in the `odom` frame. |
 | `/tf` | `tf2_msgs/msg/TFMessage` | from Gazebo | The `odom` to `base_link` transform. |
 | `/joint_states` | `sensor_msgs/msg/JointState` | from Gazebo | Wheel joint positions and velocities. |
@@ -50,9 +50,9 @@ Drive the rover by publishing `geometry_msgs/msg/TwistStamped` on `/cmd_vel`.
 
 ## When commands stop
 
-`DiffDrive` has no command timeout. It keeps the last command until a new one arrives. So `cmd_vel_watchdog` sits between `/cmd_vel` and Gazebo, as the bridge on the Jetson does on the rover (INX-140):
+`DiffDrive` has no command timeout. It keeps the last command until a new one arrives. So `cmd_vel_watchdog` sits between `/cmd_vel` and Gazebo, as the drive bridge on the Jetson does on the rover (INX-140):
 
-- It forwards each `/cmd_vel` message to `/cmd_vel_watchdog/cmd_vel`, which the bridge sends to Gazebo.
+- It forwards each `/cmd_vel` message to `/cmd_vel_watchdog/cmd_vel`, which `ros_gz_bridge` sends to Gazebo.
 - If no `/cmd_vel` arrives for 500 ms, it sends zero, and sends it again every 500 ms until commands return.
 - It subscribes with best-effort QoS and a depth of 1, so it acts only on the newest command.
 - It times the 500 ms on the wall clock, not the simulation clock, because the commands come from the laptop.

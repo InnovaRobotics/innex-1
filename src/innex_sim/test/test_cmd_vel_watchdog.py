@@ -31,7 +31,7 @@ def is_zero(message):
 
 
 class Watchdog:
-    """Talks to cmd_vel_watchdog. Stands in for teleop on /cmd_vel and for the Gazebo bridge."""
+    """Talks to cmd_vel_watchdog. Stands in for teleop on /cmd_vel and for ros_gz_bridge."""
 
     def __init__(self, domain_id):
         self.context = rclpy.Context()

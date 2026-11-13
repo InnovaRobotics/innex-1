@@ -36,8 +36,8 @@ def generate_launch_description():
             'yaw', default_value='0.0',
             description='Rover heading in radians. 0 faces east, towards the excavation zone.'),
         OpaqueFunction(function=launch_gazebo),
-        # Gazebo keeps the last command it received. If the watchdog or the bridge exits, stop the
-        # whole simulation, so the rover cannot keep driving on that command.
+        # Gazebo keeps the last command it received. If the watchdog or ros_gz_bridge exits, stop
+        # the whole simulation, so the rover cannot keep driving on that command.
         Node(
             package='innex_sim',
             executable='cmd_vel_watchdog',

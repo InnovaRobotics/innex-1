@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Stop the simulated rover when /cmd_vel stops arriving.
 
-Gazebo's DiffDrive system keeps acting on the last command it received. On the rover, the bridge
-on the Jetson sends zero when no /cmd_vel arrives for 500 ms (INX-140). This node does the same
-for the sim. It forwards each /cmd_vel to Gazebo, and sends zero when commands stop.
+Gazebo's DiffDrive system keeps acting on the last command it received. On the rover, the drive
+bridge on the Jetson sends zero when no /cmd_vel arrives for 500 ms (INX-140). This node does the
+same for the sim. It forwards each /cmd_vel to Gazebo, and sends zero when commands stop.
 """
 
 import signal
@@ -29,7 +29,8 @@ class CmdVelWatchdog(Node):
 
     def __init__(self):
         super().__init__('cmd_vel_watchdog')
-        # The same QoS as the bridge on the Jetson (INX-140), so an old command never arrives late.
+        # The same QoS as the drive bridge on the Jetson (INX-140), so an old command never
+        # arrives late.
         self.create_subscription(
             TwistStamped, '/cmd_vel', self.forward,
             QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
