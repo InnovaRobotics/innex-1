@@ -10,37 +10,37 @@ from std_msgs.msg import String
 class LadderJoy(Node):
 
     def __init__(self):
-        super().__init__("ladder_joy")
+        super().__init__('ladder_joy')
 
         self.command_publisher = self.create_publisher(
             String,
-            "/ladder/command",
+            '/ladder/command',
             10
         )
 
         self.joy_subscription = self.create_subscription(
             Joy,
-            "/joy",
+            '/joy',
             self.joy_callback,
             10
         )
 
         self.ladder_subscription = self.create_subscription(
             String,
-            "/ladder/state",
+            '/ladder/state',
             self.ladder_callback,
             10
         )
 
         self.chain_subscription = self.create_subscription(
             String,
-            "/chain/state",
+            '/chain/state',
             self.chain_callback,
             10
         )
 
-        self.ladder_state = "unknown"
-        self.chain_state = "unknown"
+        self.ladder_state = 'unknown'
+        self.chain_state = 'unknown'
 
     def joy_callback(self, msg):
         buttons = msg.buttons
@@ -57,11 +57,11 @@ class LadderJoy(Node):
 
         if lb:
             if a:
-                command = "lower"
+                command = 'lower'
             elif y:
-                command = "raise"
+                command = 'raise'
             elif rb:
-                command = "chain"
+                command = 'chain'
 
         if command is not None:
             command_msg = String()
@@ -79,8 +79,8 @@ class LadderJoy(Node):
 
     def display_state(self):
         sys.stdout.write(
-            f"\rladder: {self.ladder_state:<15} "
-            f"chain: {self.chain_state:<12}"
+            f'\rladder: {self.ladder_state:<15} '
+            f'chain: {self.chain_state:<12}'
         )
         sys.stdout.flush()
 
@@ -100,5 +100,5 @@ def main(args=None):
         rclpy.try_shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

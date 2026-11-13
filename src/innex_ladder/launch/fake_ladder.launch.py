@@ -11,39 +11,39 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     package_dir = get_package_share_directory(
-        "innex_ladder"
+        'innex_ladder'
     )
 
     config_file = os.path.join(
         package_dir,
-        "config",
-        "fake_ladder.yaml"
+        'config',
+        'fake_ladder.yaml'
     )
 
     return LaunchDescription([
 
         Node(
-            package="joy",
-            executable="game_controller_node",
-            name="game_controller_node",
+            package='joy',
+            executable='game_controller_node',
+            name='game_controller_node',
             parameters=[
-                {"autorepeat_rate": 20.0}
+                {'autorepeat_rate': 20.0}
             ]
         ),
 
         Node(
-            package="innex_ladder",
-            executable="fake_ladder",
-            name="fake_ladder",
+            package='innex_ladder',
+            executable='fake_ladder',
+            name='fake_ladder',
             parameters=[config_file],
-            output="screen"
+            output='screen'
         ),
 
         Node(
-            package="innex_ladder",
-            executable="ladder_joy",
-            name="ladder_joy",
-            output="screen"
+            package='innex_ladder',
+            executable='ladder_joy',
+            name='ladder_joy',
+            output='screen'
         )
 
     ])
