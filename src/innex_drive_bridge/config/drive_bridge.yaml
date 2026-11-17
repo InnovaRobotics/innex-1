@@ -1,0 +1,14 @@
+drive_bridge:
+  ros__parameters:
+    dry_run: true
+    legacy_protocol_reviewed: false
+    serial_port: ""
+    baudrate: 115200
+    sequence_state_file: "~/.local/state/innex_drive_bridge/sequence.txt"
+    send_rate_hz: 50.0
+    # Provisional geometry from innex_description, not measured rover values.
+    wheel_radius_m: 0.154
+    track_width_m: 0.614
+    # Preserve the +/-1000 mrad/s firmware prototype bound.
+    max_wheel_rad_s: 1.0
+    command_frame: base_link
