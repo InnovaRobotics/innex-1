@@ -1,0 +1,12 @@
+link_meter:
+  ros__parameters:
+    topics:
+      - /oak_front/rgb/image_raw
+      - /oak_front/rgb/camera_info
+      - /oak_rear/rgb/image_raw
+      - /oak_rear/rgb/camera_info
+      - /ouster/points
+      - /odom
+      - /tf
+      - /joint_states
+    limit_kbps: 3600.0
