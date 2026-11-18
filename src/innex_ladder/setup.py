@@ -21,10 +21,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='sfz3',
-    maintainer_email='sfz3@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    maintainer='sohafz8',
+    maintainer_email='149010044+sohafz8@users.noreply.github.com',
+    description='ROS 2 bucket ladder controller with gamepad input and a fake actuator',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',
