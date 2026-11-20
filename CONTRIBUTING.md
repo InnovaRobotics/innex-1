@@ -18,8 +18,9 @@ Name each branch after its issue. Use the branch name that Linear suggests, or u
 2. Keep each pull request to one feature or one fix.
 3. Run `colcon build` and `colcon test` on the Ubuntu machine.
 4. Open the pull request. Fill in both headings of the template.
-5. Get one approval from someone who did not write the change.
-6. Merge with **Squash and merge**.
+5. Wait for the **Build and test** check to pass. It runs `colcon build` and `colcon test` on GitHub.
+6. Get one approval from someone who did not write the change.
+7. Merge with **Squash and merge**.
 
 Make every change through a pull request. Do not push to `main`. [AGENTS.md](AGENTS.md) applies the same rule to AI agents.
 
