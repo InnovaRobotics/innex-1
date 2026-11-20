@@ -13,11 +13,13 @@
   <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>innex_description</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>
-  <test_depend>geometry_msgs</test_depend>
-  <test_depend>rclpy</test_depend>
+  <test_depend>nav_msgs</test_depend>
   <test_depend>ros2launch</test_depend>
+  <test_depend>ros2run</test_depend>
   <test_depend>ros2topic</test_depend>
   <test_depend>tf2_ros_py</test_depend>
 

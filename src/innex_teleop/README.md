@@ -66,7 +66,7 @@ Letting go of the enable button is the only case that sends a zero command. In e
 
 The rover side must then stop on its own. The Jetson bridge sends zero when no `/cmd_vel` arrives for 500 ms (INX-140).
 
-Gazebo has no such timeout. If `/joy` stops while you hold the enable button, the simulated rover keeps its last command. To stop it, publish a zero command or restart the simulation.
+The simulation does the same. Its `cmd_vel_watchdog` node sends zero when no `/cmd_vel` arrives for 500 ms. See [When commands stop](../innex_sim/README.md#when-commands-stop) in the `innex_sim` README.
 
 Use a wired controller. If a wireless controller loses its connection, the driver keeps repeating the last stick position until the laptop notices that the controller has gone.
 
