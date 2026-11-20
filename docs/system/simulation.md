@@ -1,67 +1,54 @@
 # Robot model and simulation
 
-The simulation (sim) runs the rover model in a virtual copy of the arena. The team uses it to test the other subsystems before the rover exists, or while the rover is unavailable.
+Building and debugging autonomy on an 80 kg rover with heavy motors is slow and risky: every test needs floor space, charged batteries and someone standing beside the E-stop. The simulation (sim) runs a virtual model of INNEX-1 inside a virtual Moon Yard arena in Gazebo Harmonic, letting you test command paths, coordinate frames, perception, localisation and navigation on a laptop before hardware is assembled or while the physical rover is in pieces.
+
+The sim takes `/cmd_vel` commands from [Teleop and rover control](teleop-and-control.md) and publishes odometry, transforms, joint states, simulated time (`/clock`) and simulated sensor streams to [Perception](perception.md) and [Localisation](localisation.md). Concrete launch commands, topic lists, arena coordinates and zone dimensions live in the package READMEs:
+
+- [innex_sim](../../src/innex_sim/README.md): the Moon Yard world, launch arguments, topics, arena frame and zone layout.
+- [innex_description](../../src/innex_description/README.md): the robot model and its coordinate frames.
 
 ## Requirements
 
-- Stand in for the rover, so the team can test software when the rover is in pieces or at another site.
-- Publish the same topics and frames as the real rover, so code written for the sim runs on the rover.
-- Hold the rover's dimensions, masses and sensor positions in one model.
-- Run fast enough. The real-time factor should be close to 1.
+- Stand in for the physical rover so software work continues when hardware is unavailable or at another site.
+- Publish matching ROS 2 topics and coordinate frames above the drive bridge so autonomy code written in simulation runs unchanged on the rover.
+- Store the rover's dimensions, masses and sensor frame offsets in one shared robot model.
+- Run close to real speed, with a real-time factor near 1.
 
-## Inputs and outputs
+## Competition rules
 
-The sim takes velocity commands from [Teleop and rover control](teleop-and-control.md), as the real rover does. It gives back odometry, transforms, joint states and the clock. The [innex_sim README](../../src/innex_sim/README.md#rover) lists the topics. When the model includes sensors, the sim gives their data to [Perception](perception.md) and [Localisation](localisation.md) on the same topics and frames as the real sensors.
+- [Navigation and sensing](../rules.md#navigation-and-sensing) and [Organiser clarifications](../rules.md#organiser-clarifications-provisional): simulation tests hold arena dimensions to spawn rocks and check bounds, while rover autonomy packages must never hard-code arena dimensions. Under the 4 November email clarification, sensing the arena walls is expected to be allowed in the final 2027 rulebook.
+- [The arena](../rules.md#the-arena): the simulated Moon Yard matches the competition's 7.9 m × 4.4 m interior dimensions and zone layout.
+- [The run](../rules.md#the-run): because judges randomise starting position and cardinal heading before each run, the sim accepts `x`, `y` and `yaw` launch arguments to test arbitrary start poses.
 
-## Rules
+## Why the sim helps, and where it stops matching the rover
 
-- [Navigation and sensing](../rules.md#navigation-and-sensing): the sim's walls are geometry only. Autonomy must not use them.
-- [The arena](../rules.md#the-arena): the world follows the arena size and the zone layout.
-- [The run](../rules.md#the-run): the judges choose the start pose at random. The sim sets the spawn pose with launch arguments.
+A bug in Gazebo costs two minutes to reproduce and reset; the same bug on the real rover costs an afternoon of lab setup. You can drive the simulated rover into a boulder a hundred times to tune a recovery behaviour without bending a single bracket.
 
-## Where the details live
+That benefit holds only where the sim and the real rover speak the same interface. If you rename a topic or move a sensor frame in one, update the other so autonomy code never forks into "sim code" and "rover code". At the same time, Gazebo deliberately leaves out two realities of the physical rover:
 
-The package READMEs hold the commands and the numbers:
+- Sand and wheel slip: Gazebo does not simulate loose regolith digging physics or realistic skid-steer sinkage on sand. Running a dig or dump sequence in sim confirms that commands and state transitions fire in order, never how much sand the bucket ladder lifts. Wheel odometry also drifts far less in sim than on real sand, so any localisation filter tuned in sim still needs real sand tuning.
+- The drive bridge and stop timeout: Gazebo's `DiffDrive` plugin replaces the rover's Jetson drive bridge, speed limits and Teensy path, and it has no command timeout. If a publisher stops sending `/cmd_vel`, the simulated rover keeps rolling at its last commanded velocity forever. Hardware stop layers and watchdog timeouts must therefore be verified on the bench and on blocks until simulation aligns with the drive bridge.
 
-- [innex_sim](../../src/innex_sim/README.md): the Moon Yard world, the launch file, the topics, the arena frame and the zones.
-- [innex_description](../../src/innex_description/README.md): the robot model and its frames.
+## The robot model (URDF and xacro)
 
-## What the sim is for
+To describe the rover's physical geometry in software, ROS 2 uses an XML format called **URDF** (Unified Robot Description Format). A URDF breaks the robot into rigid parts called **links** (chassis, wheels, camera housings, LiDAR) connected by **joints** (such as continuous rotating wheel axles). Each link carries mass, collision shape and visual geometry, and each sensor link fixes where that sensor sits relative to `base_link`.
 
-The sim finds mistakes before the rover can hurt anyone or anything. You can drive it, break it, reset it, and run the same test a hundred times. A bug in the sim costs minutes. The same bug on the rover costs a test session, and it needs someone at the E-stop.
+Writing raw XML by hand gets repetitive quickly, so the repo writes the model in **xacro**, a macro language that expands into URDF using variables and reusable parts (like defining one wheel macro and instantiating it four times).
 
-The sim helps only where it matches the rover. The sim and the rover publish the same topics and frames. If you change a topic name or a frame in one, change it in the other.
-
-## What the sim leaves out
-
-The sim does not model sand usefully, so it leaves out digging physics. It also does not model realistic wheel slip on sand. Both limits matter:
-
-- A dig or a dump in the sim shows that the commands and the sequence work. It does not show how much sand the ladder lifts.
-- Wheel odometry in the sim may drift less than on the real rover. A localisation filter that works in the sim may still need tuning on the rover.
-
-## The robot model
-
-The robot model is a URDF file written in xacro. URDF is the Unified Robot Description Format, an XML description. Xacro is a macro language that expands into URDF. The model lists the rover's parts as links, such as the chassis and the wheels. Joints connect the links. Each link has a mass and a shape. Each sensor has a frame that fixes where it sits relative to `base_link`.
-
-The sim and the rover use the same URDF. On the rover, `robot_state_publisher` reads it and publishes the transforms between the frames. A camera frame in the model is the camera frame on the rover. So sensor positions must come from measurements of the real rover.
-
-The model starts rough. It has a box chassis, four wheels and estimated masses. Measurements of the real rover replace the estimates. A rough model is enough to test the command path, the frames and the launch files, so you do not have to wait for exact numbers.
-
-## The Gazebo drive plugin
-
-Gazebo's `DiffDrive` plugin drives the four wheels as a skid steer. It has no command timeout. It keeps the last command until a new command arrives. The [innex_sim README](../../src/innex_sim/README.md#rover) gives the speed and acceleration limits.
+Both Gazebo and the real rover load the exact same URDF. On the Jetson, `robot_state_publisher` reads it and broadcasts the static transforms between `base_link` and every sensor. That means the model starts with rough June 2026 CAD dimensions and estimated masses so software can run early, and physical measurements from the assembled rover must replace every estimate before trusting calibration on hardware.
 
 ## Real-time factor
 
-The real-time factor (RTF) compares simulated time with wall-clock time. An RTF of 1 means the sim runs at real speed. An RTF of 0.5 means the sim takes two seconds to simulate one second.
+The **real-time factor (RTF)** compares how fast simulated time ticks against the clock on your wall. An RTF of `1.0` means one simulated second takes one real second. An RTF of `0.5` means Gazebo needs two real seconds to simulate one second of rover motion.
 
-A low RTF makes timing tests misleading. Nodes that use simulated time follow the sim clock. Anything on the wall clock, such as the gamepad, the network or a person watching, runs at real speed. At an RTF of 0.5, a stop that takes 0.5 s of simulated time takes 1 s of real time. Sensors cost the most, because a camera or a LiDAR renders the scene on each tick. Check the RTF each time you add a sensor.
+A low RTF quietly breaks timing tests. ROS 2 nodes using simulated time (`/clock`) slow down together with Gazebo, whereas anything tied to wall-clock time (your hands on the gamepad, network delays or a stopwatch) keeps running at full speed. At an RTF of `0.5`, a stop that takes `0.5 s` of simulated time takes a full `1.0 s` on your watch. Simulated cameras and 3D LiDAR cost the most compute because Gazebo renders the arena from each sensor's viewpoint on every tick, so check RTF whenever you enable another sensor on a laptop VM.
 
 ## Open questions
 
-1. How closely does the sim's skid steer match the real rover, once the real rover is measured?
-2. How does the sim stand in for digging and dumping, without sand?
-3. Can the sim run all the sensors at a real-time factor of 0.9 or above on a laptop virtual machine?
+1. How closely does the simulated skid-steer turning model match the real rover once chassis mass and wheel geometry are measured?
+2. Can simulation wrap or bridge the rover's actual drive bridge so stop timeouts match hardware?
+3. How does simulation mock digging and dumping load feedback without modelling loose sand?
+4. Can a typical team laptop VM run Gazebo with the Ouster LiDAR and both OAK-D Pro cameras enabled at an RTF of 0.9 or above?
 
 ## Further reading
 

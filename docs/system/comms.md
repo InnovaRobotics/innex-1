@@ -1,67 +1,67 @@
 # Comms and mission control
 
-The operator sees and drives the rover over the link. This page covers the router, the link between the laptop and the Jetson, and what the operator sees in mission control.
+Everything the operator sees in mission control and every command sent back to the rover travels over this link. Comms and mission control own the router setup, the wireless link between the mission control laptop and the Jetson, and the Foxglove operator dashboard. Nothing in this subsystem makes driving or autonomy decisions; it carries messages cleanly within the competition bandwidth cap while the other subsystems decide what to send.
 
 ## Requirements
 
-- Carry operator commands from the laptop to the Jetson.
-- Carry video and telemetry from the rover to the laptop.
-- Keep the average data rate at or below 4,000 kbps over a whole run.
-- Let ROS 2 on the laptop and on the Jetson find each other and keep talking.
-- Stop the rover when the link goes quiet, and show the operator that it has stopped.
-- Pass the comm check.
+- Carry gamepad commands from the mission control laptop to the Jetson with low latency.
+- Carry compressed front and rear video plus read-only telemetry from the rover to the laptop.
+- Keep the average wireless data rate at or below 4,000 kbps across a full run.
+- Keep ROS 2 discovery reliable over Wi-Fi without relying on multicast.
+- Show clearly when the link drops and confirm that the rover has stopped.
+- Pass the 15-minute communications check cleanly.
 
-Nothing in this subsystem makes driving decisions. It carries messages. The other subsystems decide what to send.
+## Competition rules
 
-## Rules
+- [Communications](../rules.md#communications): use a dual-band router (2.4 GHz and 5 GHz), broadcast the assigned SSID with WPA2 or WPA3 encryption, set 2.4 GHz width to 20 MHz, and keep average traffic at or below 4,000 kbps (peaks above 4,000 kbps are allowed).
+- [Comm check](../rules.md#comm-check): complete the timed inspection on Wi-Fi channel 1 within 15 minutes (show every wireless part, drive the rover wirelessly and turn off 2.4 GHz on demand).
+- [Mission control](../rules.md#mission-control): operate using only data and video from the rover and the arena camera monitors.
+- [Hands-free rules](../rules.md#hands-free-rules): watch read-only telemetry during an autonomous attempt; send no commands, orientation data or obstacle locations.
+- [Scoring](../rules.md#scoring): avoiding both arena cameras scores 120 points, so rover video has to give the operator full visibility.
+- [Organiser clarifications](../rules.md#organiser-clarifications-provisional): under the 4 November email (provisional until the final 2027 rulebook), the arena provides a mains power socket and an Ethernet cable in one corner for the team's router, feeding straight to mission control so the rover carries a Wi-Fi client radio only.
 
-- [Communications](../rules.md#communications): a dual-band router, the assigned network name, a broadcast SSID, WPA2 or WPA3, and an average of 4,000 kbps or less with no peak limit.
-- [Comm check](../rules.md#comm-check): 15 minutes on Wi-Fi channel 1. Show every wireless part, control the robot wirelessly, and turn off the router's 2.4 GHz band.
-- [Mission control](../rules.md#mission-control): use only data and video from the robot and the arena camera monitors.
-- [Hands-free rules](../rules.md#hands-free-rules): during an autonomous attempt, watch telemetry only. Send no commands, orientation data or obstacle locations.
-- [Scoring](../rules.md#scoring): each arena camera you use costs points. Rover video gives the operator the view.
-- [Undefined in v1.0](../rules.md#undefined-in-v10): the 2026 rulebook leaves arena comms, and comms between the arena and mission control, as "TBD".
+## Staying inside the 4,000 kbps budget
 
-## The 4,000 kbps budget
+Four thousand kilobits per second sounds generous until you look at raw robotics data. A single uncompressed 720p colour camera stream at 30 frames per second eats roughly 330,000 kbps, more than eighty times the entire competition cap. A 128-beam LiDAR publishes tens of thousands of 3D points several times every second.
 
-The rules limit the average rate over a run, not the peak. Short bursts above 4,000 kbps are allowed. A long burst can still delay command messages on a busy link. Three things use the budget:
+Because the rule limits the *average* rate across a run instead of instantaneous peaks, short bursts are legal, though sustained congestion still delays gamepad commands. Three kinds of traffic share the budget:
 
-- Video. It is usually the largest user. Two cameras double it.
-- Telemetry and displays: status, pose, and any map or point cloud preview. A raw point cloud is far too large to send. One scan from a 128-beam LiDAR holds tens of thousands of points, and scans repeat several times a second.
-- Discovery traffic. ROS 2 machines announce themselves and search for each other. This traffic grows with every node and topic on the link.
+- Operator video is the largest consumer, and two cameras (front and rear) double it. Each OAK-D Pro compresses its stream to H.264 inside its own hardware encoder, so you can cap bitrate directly (around 1,000 kbps per camera) without burning Jetson CPU power.
+- Telemetry carries pose, odometry, command selector state, autonomous step state and Teensy health. Raw camera images, depth frames and LiDAR point clouds stay onboard the Jetson where perception and localisation consume them.
+- Discovery traffic comes from ROS 2 nodes announcing themselves across the network, and it grows with every node and topic exposed over the link.
 
-Raw images and point clouds stay on the Jetson, where the software uses them. The operator sees compressed video. The OAK-D Pro cameras encode H.264 on the camera, so the Jetson does not spend its own processing power on it.
+Always measure average link traffic across a full 20-minute rehearsal. Short five-minute checks miss slow growth from diagnostic topics, reconnections or bursts when driving across textured sand.
 
-Measure the average rate over a full run. A short test can miss a slow rise in traffic.
+## Why ROS 2 discovery breaks on Wi-Fi
 
-## DDS discovery across machines
+ROS 2 uses a messaging middleware called **DDS** (Data Distribution Service). Out of the box, nodes on different machines find each other by broadcasting UDP multicast packets across the local network. That works reliably over an Ethernet cable on a lab bench, and fails unpredictably over Wi-Fi because routers routinely throttle or drop multicast traffic. When multicast breaks, topics appear and vanish at random, or a topic published on the Jetson never reaches the laptop.
 
-ROS 2 uses DDS, a middleware. When nodes start, DDS finds them with multicast announcements on the local network. Multicast works well on a wired network and badly on Wi-Fi, where routers often drop or throttle it. The symptom is that topics appear and disappear, or that a topic from one machine never reaches the other.
+The architecture handles this in two layers:
 
-Two fixes are common. You can give each machine a fixed address and list the other machine as a discovery peer. Or you can use a different middleware, such as `rmw_zenoh`. The Jazzy tutorial on [improved dynamic discovery](https://docs.ros.org/en/jazzy/Tutorials/Advanced/Improved-Dynamic-Discovery.html) covers the first option.
+- For video and telemetry, `foxglove_bridge` opens one plain WebSocket connection from the laptop to the Jetson and forwards only topics listed on an explicit allow-list. That stops an accidental subscriber from pulling a raw point cloud across Wi-Fi, and running the bridge with client publishing disabled guarantees the dashboard stays read-only during hands-free autonomy.
+- For ROS 2 gamepad commands travelling to the rover, two multicast-free options exist on ROS 2 Jazzy: configuring static DDS discovery peers using fixed IP addresses (covered in the Jazzy [improved dynamic discovery](https://docs.ros.org/en/jazzy/Tutorials/Advanced/Improved-Dynamic-Discovery.html) guide), or switching the middleware to `rmw_zenoh`, which routes traffic over TCP without multicast. Testing both on the competition router is an open item.
 
 ## The comm check
 
-The comm check follows a fixed procedure, so you can rehearse it. While you wait in the queue, set your equipment to channel 1. Keep all wireless equipment off until your check starts. At the station:
+Because exceeding 15 minutes disqualifies the team, rehearse the communications inspection like a drill. While waiting in the queue, configure equipment for Wi-Fi channel 1 and keep every wireless radio powered off until your slot begins. At the inspection table:
 
-1. Show the judges every wireless part.
-2. Control the rover from the laptop, over the wireless link.
-3. Turn off 2.4 GHz on the router.
+1. Show the judges every wireless component on the rover.
+2. Connect from the mission control laptop and control the rover wirelessly.
+3. Turn off the router's 2.4 GHz band on demand.
 
-If you use Bluetooth or another non-Wi-Fi radio, bring printed datasheets. If the check takes more than 15 minutes, the team is disqualified.
+Bring printed datasheets showing part number, frequency and power output for any Bluetooth or non-Wi-Fi radio.
 
 ## What the operator sees
 
-In mission control, the operator uses only data and video from the robot. The arena camera monitors give situational awareness only. Arena team members cannot tell mission control about rocks, craters or other conditions. The dashboard must therefore show everything the operator needs to drive, and to judge the state of a dig or a dump.
+Inside mission control, arena teammates cannot call out rocks, craters or berm alignment, and skipping both arena cameras earns 120 points. That means the Foxglove dashboard has to tell the operator everything required to drive safely, align the bucket ladder, judge a full load and dump cleanly onto the berm, while clearly indicating Teensy health, link status and whether the rover is in teleop, hands-free autonomy or stopped.
 
 ## Open questions
 
-1. Does operator video go through ROS and Foxglove, or through a separate video stream?
-2. Which topics cross the link, and at what rates?
-3. Do we use tuned DDS discovery settings, or `rmw_zenoh`?
-4. How do we measure the average link use over a full 20-minute run?
-5. Where does the router sit? Does the rover need its own client bridge? The rules leave arena comms undefined, so ask the organisers.
-6. What does the operator dashboard show during teleop, and during a hands-free attempt?
+1. Which ROS 2 transport carries gamepad commands most reliably over the competition router: static DDS peers or `rmw_zenoh`?
+2. Which exact telemetry topics cross `foxglove_bridge`, and at what publish rates?
+3. How does the team measure and log average link throughput across a full 20-minute rehearsal?
+4. Will the final 2027 rulebook confirm the corner-router and arena-Ethernet layout from the 4 November organiser email?
+5. What exact panels and status warnings appear on the operator Foxglove layout during teleop versus hands-free autonomy?
 
 ## Further reading
 
