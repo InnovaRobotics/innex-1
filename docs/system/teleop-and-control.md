@@ -1,84 +1,91 @@
 # Teleop and rover control
 
-Teleop turns commands into wheel and actuator motion. This page covers the path from the gamepad, or from the autonomy software, to the motors. It also covers how the rover stops.
+Every command that moves a wheel, lowers the bucket ladder or tips the dump bed passes through this subsystem. Teleop and rover control turn high-level motion commands from either the operator's gamepad or the autonomy software into physical motor and actuator signals, read wheel encoder counts back for [Localisation](localisation.md), and guarantee that the rover stops safely whenever anything goes wrong.
 
 ## Requirements
 
-- Turn a velocity command into left and right wheel speeds.
-- Move the bucket ladder and the dump bed on command.
-- Stop every output when commands stop arriving, when the operator releases the enable button, or when a fault occurs.
-- Report wheel motion as encoder counts, so other software can estimate distance.
-- Give each motor and actuator exactly one source of commands.
+- Convert a rover velocity command into left and right skid-steer wheel setpoints.
+- Operate the bucket ladder and dump bed mechanisms on command while respecting physical end stops.
+- Stop every motor and actuator whenever commands stop arriving, the operator releases the enable button, or a fault occurs.
+- Never restart motion automatically after an E-stop reset.
+- Count wheel motor encoder pulses so other subsystems can compute wheel odometry.
+- Route commands so every motor and actuator accepts input from one source at a time.
 
-## Rules
+## Competition rules
 
-- [E-stop](../rules.md#e-stop): one push stops all motion and disconnects the batteries from all controllers.
-- [Hands-free rules](../rules.md#hands-free-rules): during an autonomous attempt, nobody can send commands to the rover.
-- [Rover safety](../safety.md): the motor rules apply to all rover work.
+- [E-stop](../rules.md#e-stop): one push disconnects the batteries from all controllers and active subsystems, and resetting the button must not restart the rover without a separate start command.
+- [Hands-free rules](../rules.md#hands-free-rules): during an autonomous attempt, nobody in mission control can send commands to the rover.
+- [Rover safety](../safety.md): the motor testing rules (E-stop in reach, wheels off the ground or clear area, fixed run duration, final zero command) apply to every rover test.
 
-## Command path
+## How a command reaches the wheels
 
-A command starts at the gamepad on the mission control laptop, or in the autonomy software on the Jetson. It reaches the Jetson as a `/cmd_vel` message. A node on the Jetson converts the message into left and right wheel setpoints. It sends the setpoints to the Teensy over USB serial. The Teensy signals the Sabertooth controllers, and they drive the motors.
+A motion command begins either at the operator's gamepad on the mission control laptop or inside the autonomy software on the Jetson. Both express motion the same way: a `geometry_msgs/msg/TwistStamped` message on `/cmd_vel` in the `base_link` frame, giving forward speed (in m/s) and turn rate (in rad/s).
 
-Velocity commands use `/cmd_vel`, with the message type `geometry_msgs/msg/TwistStamped` and the frame `base_link`. A setpoint is an absolute target, such as a wheel speed or an actuator position. It is not a change from the last value.
+Before commands reach the drive bridge, an onboard **command multiplexer (mux)** chooses which source has control. If the gamepad and navigation both published straight to the drive bridge at the same time, the wheels would snap back and forth between whichever message arrived last. Having a single onboard selector prevents conflicting commands, lets an operator stop override autonomy immediately, and blocks stray gamepad packets during hands-free runs.
 
-Each motor and actuator has exactly one source of commands. If two sources command the same wheel, the rover follows whichever message arrived last. That behaviour is hard to predict or test. Something must choose between the gamepad and autonomy before the bridge. That choice is a command mux. Where it runs is an open question.
+From the selector, the Jetson drive bridge converts the velocity command into left and right wheel **setpoints** and sends them to the Teensy 4.1 over USB serial. A setpoint is an absolute target ("spin at 0.20 m/s"), not a relative change ("spin 0.05 m/s faster"). Absolute setpoints keep the rover predictable even if a packet drops, because the next message states the exact speed wanted without compounding missed increments. The Teensy turns those setpoints into control signals for the Sabertooth motor controllers, which power the four wheel motors.
 
 ## Stop at three layers
 
-Each layer that can fail must be able to stop the rover.
+Never trust one computer to catch every failure. If a software bug freezes the Jetson, a timeout sitting inside the Jetson can't save you; if the Wi-Fi drops, releasing a button on the laptop never reaches the rover. That's why INNEX-1 stops at three independent layers, where each layer catches failures in everything upstream of it:
 
-1. The laptop sends motion only while the operator holds the enable button. Releasing the button stops the rover. This layer needs no network.
-2. The bridge on the Jetson sends zero if no command arrives for 500 ms. This layer catches a dead laptop, a dropped link or a crashed node.
-3. The Teensy stops its motor outputs if no valid message arrives for 250 ms. This layer catches a crashed Jetson, a stalled bridge, a loose cable and corrupt messages.
+1. Enable button on the laptop: the gamepad node publishes motion only while the operator holds the dead-man enable button. Letting go immediately publishes a zero command. This layer stops the rover during normal driving without waiting on any timeout.
+2. Drive bridge on the Jetson (500 ms watchdog): if no command arrives for 500 ms, the bridge sends zero setpoints to the Teensy. This catches a dead laptop, a dropped Wi-Fi link or a crashed gamepad node.
+3. Teensy 4.1 firmware (250 ms watchdog): if no valid serial message arrives for 250 ms, the Teensy disables all motor and actuator outputs immediately. This catches a frozen Jetson, a crashed bridge, a loose USB cable or corrupt serial bytes.
 
-On a fault, the outputs stop. They do not hold the last value. A watchdog is a timer that expects regular input and acts when the input stops. Do not lengthen or remove a timeout. See [Rover safety](../safety.md#during-a-run).
+A timer that expects regular input and shuts outputs off the moment input goes quiet is called a **watchdog**. On any fault or timeout, every layer forces outputs to zero; nothing ever holds the last commanded speed. Never disable or lengthen a watchdog timeout (see [Rover safety](../safety.md#during-a-run)). Because serial transit and controller deceleration follow the 500 ms bridge timeout, stopping from the last valid command takes roughly 600 ms (at 0.25 m/s, the rover travels about 15 cm before braking starts).
 
-The sim works differently. Gazebo's `DiffDrive` plugin has no command timeout. It keeps the last command until a new one arrives, so a stopped publisher does not stop the sim rover. See [Simulation](simulation.md).
+Watch out for one difference in [Simulation](simulation.md): Gazebo's `DiffDrive` plugin has no command timeout and keeps spinning at the last velocity forever if a publisher stops. Always test real stop behaviour on the bench and on blocks.
 
-## Old commands must not arrive late
+## Why old commands must not arrive late
 
-A command that arrives two seconds late describes where the operator wanted to go two seconds earlier. Queued commands make this worse. After a network stall, the rover would replay the backlog.
+Suppose Wi-Fi stalls for two seconds while the operator is steering away from a boulder, and the network queues up twenty velocity messages while waiting to reconnect. When the link recovers, replaying that two-second backlog drives the rover along commands from a moment that has already passed, straight into the wall.
 
-The bridge subscribes with a queue depth of 1. It acts only on the newest command. A sequence number on each serial message lets the Teensy drop a message that is older than one it has already used.
+To prevent stale replay, the drive bridge subscribes with a queue depth of 1, discarding older waiting messages and acting only on the newest command. The bridge measures command freshness using arrival time on the Jetson's local monotonic clock instead of comparing laptop and Jetson wall-clock timestamps, which avoids false dropouts when the two computers' clocks differ by a few milliseconds.
 
 ## Skid-steer turning
 
-A skid-steer rover has no steering mechanism. The wheels on each side turn at one speed, and the rover turns by driving the two sides at different speeds. Equal speeds drive straight. Opposite speeds turn on the spot.
+INNEX-1 has no steerable front wheels. Like a tracked vehicle, a **skid-steer** rover steers by spinning its left and right sides at different speeds. Equal speeds drive straight ahead; equal and opposite speeds spin the rover on the spot.
 
-Left wheel speed is the forward speed minus half the track width times the turn rate. Right wheel speed is the forward speed plus the same amount. The wheel radius converts each speed into a rotation rate.
+Given a forward speed `v`, a turn rate `omega` (positive turning left under REP 103) and the sideways distance `track` between the left and right wheels, each side's target linear speed is:
 
-Dragging the wheels sideways across sand means the rover turns less than the arithmetic says. [Localisation](localisation.md) covers the effect on odometry.
+```text
+left wheel speed  = v - (track / 2) * omega
+right wheel speed = v + (track / 2) * omega
+```
+
+Dividing each speed by the wheel radius converts linear speed into wheel rotation rate. Turning a rigid four-wheel chassis forces the tyres to drag sideways across the sand, so the rover turns less than those equations predict. [Localisation](localisation.md) explains how that slip affects odometry and how the gyroscope and LiDAR compensate for it.
 
 ## Encoders and wheel odometry
 
-A quadrature encoder gives two pulse trains a quarter cycle apart. The Teensy counts the pulses and finds the direction of rotation. The counts per wheel revolution convert rotation into distance. Combining the left and right distances over time gives wheel odometry. Wheel odometry estimates how far the rover has moved and which way it faces. The estimate drifts when the wheels slip.
+To measure how far each wheel turned, the drive motors carry **quadrature encoders**. Suppose an encoder produced only a single stream of pulses as the wheel rotated: counting pulses would tell you how fast the wheel spun, never whether it rotated forwards or backwards.
+
+A quadrature encoder solves this by producing two pulse trains offset by a quarter of a cycle (90 degrees). When the wheel spins forwards, channel A rises before channel B; when it reverses, channel B rises before channel A. The Teensy counts every edge in hardware, tracks direction automatically and sends cumulative counts back to the Jetson. Combining left and right wheel distances gives **wheel odometry**, an estimate of distance travelled and heading change that stays smooth over short intervals even though tyre slip makes it drift on sand.
 
 ## Dig and dump
 
-The bucket ladder lowers into the sand and raises again. The dump sequence has five steps:
+The bucket ladder lowers into the sand, runs its chain to collect sand, and raises clear of the ground. Dumping follows a fixed five-step sequence:
 
-1. The door opens.
-2. The bed raises.
-3. The bed holds its raised position.
-4. The bed lowers.
-5. The door closes.
+1. Open the dump door.
+2. Raise the dump bed.
+3. Hold the raised position so sand clears the bed.
+4. Lower the dump bed.
+5. Close the dump door.
 
-The stop rules apply to the mechanisms too. If commands stop, the actuators stop.
+All watchdog and stop rules apply to the excavation and dump actuators too: if commands stop arriving, every actuator halts immediately. The proposed architecture lets the Teensy enforce hardware end stops and actuator safety limits while the mission node on the Jetson coordinates the five-step sequence.
 
 ## The E-stop
 
-The E-stop disconnects the batteries from all controllers. Software must not depend on it. A rover that stops safely only because someone pressed the button has a fault in its software path. Resetting the E-stop must not restart the rover. A separate, deliberate command restarts it.
+The red E-stop button disconnects battery power physically from all motor controllers and active subsystems. Treat it as a hard safety backstop, never as a normal way to stop the rover. A rover that needs someone to hit the E-stop to stop cleanly has a defect in its software stop path. Because resetting the E-stop must never resume motion on its own, the Teensy needs to know when power was cut and stay disarmed until a deliberate restart command arrives.
 
 ## Open questions
 
-1. Does the Jetson side use `ros2_control` with `diff_drive_controller`, or a plain ROS node?
-2. What is the serial message format between the Jetson and the Teensy? How does each side detect a corrupt or out-of-order message?
-3. Where does the command mux run, and which command sources does it choose between?
-4. Which controller drives the excavation BLDC motor, and how does the Teensy command it?
-5. What feedback do the bucket ladder and the dump bed give: limit switches, encoders or motor current?
-6. How does the rover know that the bucket ladder has collected enough, or that a dump has finished?
-7. Does the Jetson stay powered when the E-stop is pressed? If it does, which battery powers it?
+1. Does the Jetson side stay a standalone ROS 2 bridge node, or move to `ros2_control` with `diff_drive_controller`?
+2. What exact binary serial protocol carries wheel setpoints, mechanism commands, encoder counts and Teensy armed/fault/E-stop state between the Jetson and Teensy?
+3. Does the command mux extend `twist_mux` with a separate mechanism arbiter, or run as one unified mode node on the Jetson?
+4. Which motor controller drives the 24 V excavation BLDC motor, and what control signal does the Teensy send it?
+5. What physical feedback do the bucket ladder and dump bed provide (limit switches, encoders or motor current), and how does the rover confirm a full load or completed dump?
+6. How does the Teensy detect an E-stop press and enforce the deliberate restart requirement when the Jetson stays powered on a separate battery?
 
 ## Further reading
 

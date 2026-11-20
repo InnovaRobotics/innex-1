@@ -1,85 +1,87 @@
 # Navigation and mission
 
-Navigation turns a goal into a path and follows it. The mission decides which goal comes next, and it runs the dig and dump steps.
+Knowing where the rover sits and where the rocks lie doesn't move a single wheel on its own. Navigation turns a destination into a safe path around hazards and tracks that path with velocity commands, while the mission layer decides which step of the excavation cycle comes next and runs the dig and dump sequences.
+
+Navigation and mission take hazards from [Perception](perception.md) and the pose from [Localisation](localisation.md). They output velocity commands on `/cmd_vel` and mechanism commands to [Teleop and rover control](teleop-and-control.md), and report live step status through [Comms](comms.md). Keeping hazard detection, localisation and low-level motor control outside this subsystem lets you test planning and mission logic in isolation before putting everything on the rover.
 
 ## Requirements
 
-- Turn a goal into a path that avoids hazards, and follow that path.
-- Replan when the picture around the rover changes.
-- Start the dig sequence on arrival at the excavation zone. Start the dump sequence on arrival at the berm.
-- Check that the rover is ready before an attempt. Stop the attempt if it is not.
-- Retry a failed step a limited number of times. Then end the attempt safely.
-- Keep the rover inside the arena without using the walls as landmarks.
+- Turn a target zone into a collision-free route around detected boulders, craters and walls, and follow it.
+- Replan automatically whenever perception uncovers obstacles along the active route.
+- Run the dig sequence upon arriving at the excavation zone and the dump sequence upon arriving at the berm.
+- Check system readiness before starting any autonomous attempt, and refuse to start if a check fails.
+- Report step state (`running`, `complete` or `failed`) and halt safely after bounded retries if a step gets stuck.
+- Keep the rover inside the arena using live sensed walls without hard-coding the arena's dimensions.
 
-## Inputs and outputs
+## Competition rules
 
-Navigation takes hazards from [Perception](perception.md) and the pose from [Localisation](localisation.md). It sends velocity commands on `/cmd_vel`, and mechanism commands to [Teleop and rover control](teleop-and-control.md). It reports progress as telemetry through [Comms](comms.md).
+- [Autonomy](../rules.md#autonomy): each autonomous task has a defined hands-free boundary and point value; under the 4 November organiser email clarification, tasks score independently so a later failure doesn't erase earlier credit.
+- [Autonomy conditions](../rules.md#autonomy-conditions): for travel autonomy, a pre-programmed "point and traverse" path is forbidden.
+- [Autonomy penalties](../rules.md#autonomy-penalties): touching a boulder or driving over a crater in the obstacle zone costs 30 points per incident.
+- [Hands-free rules](../rules.md#hands-free-rules): announce every attempt to the judge before starting, and send no commands, orientation data or obstacle locations while it runs.
+- [Navigation and sensing](../rules.md#navigation-and-sensing) and [Organiser clarifications](../rules.md#organiser-clarifications-provisional): sensing and mapping the pit walls as obstacles is expected to be allowed in the final 2027 rulebook, while hard-coding arena dimensions is forbidden.
+- [During the run](../rules.md#during-the-run): stay inside the arena without hitting the walls, and do not push boulders or fill craters in the obstacle zone.
 
-Navigation does not own hazard detection, global anchoring or mechanism control. Perception, localisation and the control subsystem own those. Clear boundaries let you test each part alone.
+## Why routes have to be planned live
 
-## Rules
+Before each round, the judges scatter boulders and dig craters at random across the obstacle zone. Because the layout changes every run, recording a fixed waypoint path beforehand won't work, and the rules ban "point and traverse" approaches for the same reason.
 
-- [Autonomy](../rules.md#autonomy): each task has a hands-free boundary, and the points depend on it.
-- [Autonomy conditions](../rules.md#autonomy-conditions): for travel, a "point and traverse" approach is not allowed.
-- [Autonomy penalties](../rules.md#autonomy-penalties): contact with a rock, or driving over a crater, costs points.
-- [Hands-free rules](../rules.md#hands-free-rules): announce each attempt. Send no commands, orientation data or obstacle locations during it.
-- [Navigation and sensing](../rules.md#navigation-and-sensing): no walls for mapping, navigation or collision avoidance.
-- [During the run](../rules.md#during-the-run): stay inside the arena. Do not push obstacles or fill craters in the obstacle zone.
+Instead, navigation works from a live map built from what the rover's sensors have seen so far. The standard representation is a **costmap**: a 2D grid laid over the arena floor where every cell holds a numerical cost for driving across it. Flat, confirmed sand carries a low cost, cells close to a boulder carry an inflated buffer cost so the rover gives rocks wide clearance, and confirmed boulders, craters and sensed walls carry a lethal cost that no path can cross. As the rover drives forward and sees behind a rock for the first time, perception updates the costmap and the planner recalculates the cheapest safe route around whatever appeared.
 
-## Obstacles are random
+## Forward to dig, reverse or turn to dump
 
-The judges place rocks and craters at random before each round. Teams cannot record a route and replay it. The rules forbid a "point and traverse" approach for the same reason. The rover must find a route through the obstacles it detects in that run.
+INNEX-1 isn't symmetric front to back. The bucket ladder mounts on the front, while the dump bed empties out the rear. That means the rover must approach the excavation zone facing forwards, and line up with the berm target area facing backwards.
 
-A planner works from a map of what the sensors have seen so far, and it replans as the map fills in. A costmap is a common form of this map. Each cell holds a cost for driving through it.
+That creates an important planning choice: the rover can either reverse back across the obstacle zone to the berm, or drive forwards across the obstacle zone and turn 180 degrees near the construction zone. Reversing avoids dragging skid-steer tyres in a tight 180-degree spin on loose sand (which wastes power and kicks up wheel-odometry drift), but it requires a planner and controller that generate and follow reversing trajectories cleanly. Because obstacles can sit inside the construction zone as well as the obstacle zone, the dump approach still consults the live hazard map either way.
 
-## Forward to dig, reverse to dump
+## The mission cycle
 
-The bucket ladder sits at the front of the rover. The dump bed empties at the rear. So the rover approaches the excavation zone forwards and approaches the berm in reverse. Reversing avoids turning on the spot in loose sand. The planner and the controller must follow paths in both directions. A planner that assumes forward motion cannot plan the reversing approach to the berm.
-
-## The cycle
+The mission layer steps through the excavation cycle shown in the diagram, logging why each stage started, succeeded or stopped.
 
 ```mermaid
 flowchart TD
-    localise["Localise"] --> travel1["Travel to the excavation zone"]
+    localise["Localise in start zone"] --> travel1["Travel to excavation zone"]
     travel1 --> dig["Dig"]
-    dig --> travel2["Travel to the construction zone"]
+    dig --> travel2["Travel to construction zone"]
     travel2 --> dump["Dump"]
-    dump --> decide{"Time and health allow another cycle?"}
+    dump --> decide{"Time and rover health allow another cycle?"}
     decide -->|yes| travel1
     decide -->|no| stop["Stop safely"]
 ```
 
-Each step reports what happened. The log shows why the mission continued, succeeded or stopped.
+Follow the decision box at the bottom of the loop. Under the 4 November email clarification, the berm scoring formulas divide by the actual duration of the run when the team ends it, and full autonomy requires two complete cycles. Stopping cleanly once two fast cycles finish, or ending early if a mechanism faults, can score higher than limping through a slow third cycle.
 
 ## Readiness checks
 
-Before an attempt, the mission checks that the rover can do the job. It checks that odometry arrives, the transforms exist, the pose is certain enough, and each sensor publishes. A rover with a hidden fault fails in ways that look like planning bugs, and those failures take hours to trace. If a check fails, the mission does not start.
+Before starting any autonomous attempt, the mission node runs a pre-flight check: odometry is arriving at rate, the `map` to `odom` to `base_link` transforms exist, pose uncertainty is below its threshold, and every required sensor topic is alive. Skipping these checks is a false shortcut. A missing transform or stale LiDAR topic produces bizarre steering failures that look like path-planning bugs and waste hours of test time to diagnose. If any readiness check fails, the mission refuses to arm and tells the operator why.
 
 ## Bounded recoveries
 
-Things go wrong during a run. The rover gets stuck, a path is blocked, or a detection flickers. A recovery is an action that gets the rover out of such a state, such as backing up or turning on the spot. Recoveries need limits, in the number of tries and in time. Without limits, the rover can spend the whole run recovering. The mission ends an attempt that exceeds its limits, and it announces the failure, as the hands-free rules require.
+Real runs go wrong in messy ways: a wheel bogs down in soft sand, a noisy detection temporarily blocks the only lane, or a tight corridor stalls the controller. A **recovery** is a short fallback behaviour meant to unstick the rover, such as clearing stale costmap cells, backing up half a metre or turning in place to re-scan.
+
+Recoveries need hard limits on both retry count and elapsed time. Without bounds, a stuck rover can burn the entire run rocking backwards and forwards in one crater. Once an attempt hits its retry or time cap, the mission stops the motors, reports a `failed` step state on telemetry and lets the operator announce the failure to the judge before taking manual control.
 
 ## Where the hands-free boundary falls
 
-Each autonomy task starts hands-free at a point that the rules set.
+Each autonomy task starts hands-free at a specific line set by the rules:
 
-- Excavation: before the rover touches the sand. Lift the digging mechanism out of the sand before you take control again.
-- Dump: before the rover enters the construction zone. You can cross the obstacle zone by remote control.
-- Travel and both full autonomy tasks: in the start zone. You can drive only inside the start zone to localise.
+- Excavation (75 points): go hands-free before the digging mechanism touches the sand, and lift it completely clear of the sand before taking control back.
+- Dump (50 points): you can drive across the obstacle zone by remote control, then go hands-free before any part of the rover crosses into the construction zone.
+- Travel (250 points) and both full autonomy tasks (450 and 600 points): you can drive by remote control only inside the start zone to localise against the beacon, then go hands-free inside the start zone.
 
-After that point, nobody can tell the rover where to go. The mission must already know its goal, or work it out from its own sensors. A goal in the arena frame depends on the pose from [Localisation](localisation.md).
+After crossing that boundary, nobody in mission control can steer, send coordinates or update obstacle maps. The mission has to know its target zones from the beacon frame and its own sensors. Confirming whether zone offsets relative to the beacon count as allowed navigation goals (and not hard-coded arena dimensions) is an open question for the organisers.
 
 ## Open questions
 
-1. Does autonomous excavation need navigation, or does it need only the dig sequence?
-2. Which planner and controller suit a skid-steer rover that drives forward to dig and reverses to dump?
-3. How does the planner stay inside the arena without using the walls as landmarks?
-4. Does the mission run as a state machine or a behaviour tree?
-5. How many retries does each step get before the attempt is declared failed?
-6. How does the operator start an attempt and follow its progress without sending the rover anything?
+1. Does autonomous excavation need route planning inside the excavation zone, or only the automated dig sequence once positioned?
+2. Which planner and controller suit a skid-steer rover that drives forwards to dig and may reverse to dump?
+3. Can the rover store zone goal offsets relative to the beacon frame without breaking the rule against hard-coded arena dimensions?
+4. Does the mission run as a finite state machine or a behaviour tree?
+5. How many retries and how many seconds does each step get before declaring failure?
+6. How does the operator trigger a hands-free attempt cleanly and monitor its `running`, `complete` or `failed` state without sending commands during the attempt?
 
 ## Further reading
 
 - [Jazzy launch tutorials](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Launch/Launch-Main.html)
-- [Nav2, the common ROS 2 navigation framework](https://docs.nav2.org/)
+- [Nav2, the ROS 2 navigation framework](https://docs.nav2.org/)
 - [Nav2 keepout zones tutorial](https://docs.nav2.org/jazzy/tutorials/general_tutorials/navigation2_with_keepout_filter/navigation2_with_keepout_filter/)
