@@ -2,11 +2,11 @@
 
 import threading
 
-from foxglove_msgs.msg import CompressedVideo
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
+from innex_video.video_messages import make_compressed_video
 from innex_sim.sim_source import SimSource
 
 
@@ -48,13 +48,8 @@ class SimVideoRelay(Node):
                 if not rclpy.ok():
                     break
 
-                msg = CompressedVideo()
-                msg.timestamp.sec = timestamp_ns // 1_000_000_000
-                msg.timestamp.nanosec = timestamp_ns % 1_000_000_000
-                msg.frame_id = self.frame_id
-                msg.format = 'h264'
-                msg.data = data
-                self.publisher_.publish(msg)
+                self.publisher_.publish(make_compressed_video(
+                    timestamp_ns, data, self.frame_id))
 
         except Exception as exc:
             self.get_logger().error(f'Simulated video source stopped: {exc}')

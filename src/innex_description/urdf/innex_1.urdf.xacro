@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <robot name="innex_1" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
+  <xacro:arg name="sim_cameras" default="true"/>
+
   <!-- Will replace with proper values when rover is measured -->
   <xacro:property name="chassis_length" value="1.000"/>
   <xacro:property name="chassis_width" value="0.430"/>
@@ -124,11 +126,13 @@
   <xacro:property name="camera_pitch" value="${15 * pi / 180}"/>
 
   <!-- Front and rear OAK-D Pro cameras -->
-  <xacro:oak_d_pro prefix="oak_front" parent="chassis" pitch="${camera_pitch}">
+  <xacro:oak_d_pro prefix="oak_front" parent="chassis" pitch="${camera_pitch}"
+                   sim_cameras="$(arg sim_cameras)">
     <origin xyz="${chassis_length / 2 + 0.01 + 0.023 / 2} 0 0.05" rpy="0 0 0"/>
   </xacro:oak_d_pro>
 
-  <xacro:oak_d_pro prefix="oak_rear" parent="chassis" pitch="${camera_pitch}">
+  <xacro:oak_d_pro prefix="oak_rear" parent="chassis" pitch="${camera_pitch}"
+                   sim_cameras="$(arg sim_cameras)">
     <origin xyz="${-chassis_length / 2 - 0.01 - 0.023 / 2} 0 0.05" rpy="0 0 ${pi}"/>
   </xacro:oak_d_pro>
 

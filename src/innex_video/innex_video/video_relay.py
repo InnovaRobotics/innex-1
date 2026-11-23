@@ -1,6 +1,7 @@
 import threading
 
 from foxglove_msgs.msg import CompressedVideo
+from innex_video.video_messages import make_compressed_video
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -12,24 +13,24 @@ class VideoRelay(Node):
 
         self.declare_parameter('output_topic', '/camera/video')
         self.declare_parameter('frame_id', 'oak_front_rgb_optical_frame')
-        self.declare_parameter('fps', 20)
+        self.declare_parameter('fps', 15)
         self.declare_parameter('bitrate', 1000)
         self.declare_parameter('video_size', [864, 480])
         self.declare_parameter('device_id', '')
-        self.declare_parameter('camera_role', 'front')
 
         fps = int(self.get_parameter('fps').value)
         bitrate = int(self.get_parameter('bitrate').value)
         video_size = self.get_parameter('video_size').value
 
-        from innex_video.oakH264 import OakH264Recorder
+        from innex_video.oak_h264 import OakH264
 
-        self.source = OakH264Recorder(
+        self.source = OakH264(
+            device_id=self.get_parameter('device_id').value or None,
+            width=int(video_size[0]),
+            height=int(video_size[1]),
             fps=fps,
-            bitrate_Kbps=bitrate,
-            video_size=tuple(video_size),
-            device_id=self.get_parameter('device_id').value,
-            camera_role=self.get_parameter('camera_role').value)
+            bitrate_kbps=bitrate,
+            keyframe_every=fps)
 
         self.frame_id = self.get_parameter('frame_id').value
         output_topic = self.get_parameter('output_topic').value
@@ -48,14 +49,8 @@ class VideoRelay(Node):
                 if not rclpy.ok():
                     break
 
-                msg = CompressedVideo()
-                msg.timestamp.sec = timestamp_ns // 1_000_000_000
-                msg.timestamp.nanosec = timestamp_ns % 1_000_000_000
-                msg.frame_id = self.frame_id
-                msg.format = 'h264'
-                msg.data = data
-
-                self.publisher_.publish(msg)
+                self.publisher_.publish(make_compressed_video(
+                    timestamp_ns, data, self.frame_id))
 
         except Exception as exc:
             self.get_logger().error(f'Video source stopped: {exc}')

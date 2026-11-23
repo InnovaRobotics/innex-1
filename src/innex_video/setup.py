@@ -18,8 +18,8 @@ setup(
     zip_safe=True,
     maintainer='abube',
     maintainer_email='abube@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='OAK camera H.264 video relay for Foxglove.',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',

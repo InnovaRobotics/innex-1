@@ -17,6 +17,10 @@ ros2 launch innex_sim moon_yard.launch.py
 ros2 launch innex_sim moon_yard.launch.py gui:=false
 ```
 
+Video is disabled by default. Pass `video:=true` to add the Gazebo camera sensors, bridge their images, start the front and rear H.264 encoders, and launch Foxglove Bridge. The output topics are `/oak_front/video` and `/oak_rear/video`; Foxglove Bridge listens on port `8765`.
+
+The image relay uses PyAV; install Ubuntu's `python3-av` package if it is not already available.
+
 The launch file also starts `robot_state_publisher`, spawns the rover, and starts `cmd_vel_watchdog` and a `ros_gz_bridge` configured by `config/bridge.yaml`. If `cmd_vel_watchdog` or `ros_gz_bridge` exits, the launch stops the whole simulation.
 
 To run the world without ROS, [source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation) so the environment hook sets `GZ_SIM_RESOURCE_PATH`, then run `gz sim -r -s <path to world>.sdf` for a headless server.

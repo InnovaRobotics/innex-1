@@ -1,9 +1,11 @@
 front_video_relay:
   ros__parameters:
-    # Enter the front OAK camera's DepthAI deviceId here.
+    # Optional: enter the front camera's DepthAI deviceId. When blank, the
+    # launch file assigns connected unconfigured cameras automatically.
     device_id: ''
 
 rear_video_relay:
   ros__parameters:
-    # Enter the rear OAK camera's DepthAI deviceId here.
+    # Optional: enter the rear camera's DepthAI deviceId. When blank, the
+    # launch file assigns connected unconfigured cameras automatically.
     device_id: ''
