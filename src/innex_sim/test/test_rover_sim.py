@@ -6,11 +6,14 @@ import subprocess
 import time
 from typing import NamedTuple
 
+from foxglove_msgs.msg import CompressedVideo
+from geometry_msgs.msg import TwistStamped
+from innex_video.video_messages import nal_types
+from nav_msgs.msg import Odometry
 import pytest
 import rclpy
-from geometry_msgs.msg import TwistStamped
-from nav_msgs.msg import Odometry
 from rclpy.executors import SingleThreadedExecutor
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
 from tf2_ros import Buffer, TransformListener
 
@@ -163,6 +166,38 @@ def test_rear_camera_publishes(sim):
     topic = '/oak_rear/rgb/image_raw'
     frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
     assert frame_id == 'oak_rear_rgb_camera_optical_frame'
+
+
+def test_front_and_rear_video_publish_h264_keyframes(sim):
+    context = rclpy.Context()
+    rclpy.init(context=context, domain_id=int(sim.env['ROS_DOMAIN_ID']))
+    node = rclpy.create_node('test_video_listener', context=context)
+    executor = SingleThreadedExecutor(context=context)
+    executor.add_node(node)
+    keyframes = {}
+    for role in ('front', 'rear'):
+        node.create_subscription(
+            CompressedVideo,
+            f'/oak_{role}/video',
+            lambda msg, r=role: (
+                keyframes.setdefault(r, msg)
+                if {5, 7, 8} <= nal_types(msg.data) else None
+            ),
+            qos_profile_sensor_data,
+        )
+    try:
+        deadline = time.monotonic() + 10.0
+        while time.monotonic() < deadline and len(keyframes) < 2:
+            executor.spin_once(timeout_sec=0.1)
+        assert set(keyframes) == {'front', 'rear'}, (
+            f'missing H.264 keyframes: {set(keyframes)}')
+        for role, msg in keyframes.items():
+            assert msg.format == 'h264'
+            assert msg.frame_id == f'oak_{role}_rgb_camera_optical_frame'
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown(context=context)
 
 
 def test_ouster_points_publishes(sim):

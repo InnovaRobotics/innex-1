@@ -28,8 +28,8 @@ jobs:
         run: |
           apt-get update
           rosdep update --rosdistro jazzy
-          # python3-av is an Ubuntu package but has no rosdep key.
-          rosdep install --from-paths src --ignore-src --rosdistro jazzy -y --skip-keys=python3-av
+          rosdep install --from-paths src --ignore-src --rosdistro jazzy -y
+          # python3-av is an Ubuntu package with no rosdep key.
           apt-get install -y --no-install-recommends python3-av xvfb
 
       - name: Build
