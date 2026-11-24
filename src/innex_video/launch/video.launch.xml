@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="camera_config"
+       default="$(find-pkg-share innex_video)/config/camera_ids.yaml"
+       description="YAML file with front and rear OAK device IDs." />
+  <arg name="port"
+       default="8765"
+       description="WebSocket port for Foxglove Bridge." />
+
+  <node pkg="innex_video" exec="video_relay" name="front_video_relay" output="screen">
+    <param from="$(var camera_config)" />
+    <param name="output_topic" value="/oak_front/video" />
+    <param name="frame_id" value="oak_front_rgb_camera_optical_frame" />
+    <param name="allow_auto_device" value="true" />
+  </node>
+
+  <node pkg="innex_video" exec="video_relay" name="rear_video_relay" output="screen">
+    <param from="$(var camera_config)" />
+    <param name="output_topic" value="/oak_rear/video" />
+    <param name="frame_id" value="oak_rear_rgb_camera_optical_frame" />
+    <param name="allow_auto_device" value="false" />
+  </node>
+
+  <include file="$(find-pkg-share foxglove_bridge)/launch/foxglove_bridge_launch.xml">
+    <arg name="port" value="$(var port)" />
+    <arg name="topic_whitelist" value="['^/oak_(front|rear)/video$']" />
+    <arg name="capabilities" value="[connectionGraph]" />
+    <arg name="client_topic_whitelist" value="['(?!)']" />
+    <arg name="service_whitelist" value="['(?!)']" />
+    <arg name="param_whitelist" value="['(?!)']" />
+  </include>
+</launch>

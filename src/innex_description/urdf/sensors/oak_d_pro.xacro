@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
   <!-- Luxonis OAK-D Pro active stereo camera macro -->
-  <xacro:macro name="oak_d_pro" params="prefix parent *origin pitch:=0.0 topic_prefix:='' horizontal_fov:=1.2043 width:=640 height:=400 rate:=15.0">
+  <xacro:macro name="oak_d_pro" params="prefix parent *origin pitch:=0.0 topic_prefix:='' horizontal_fov:=1.2043 width:=864 height:=480 rate:=15.0 sim_cameras:=true">
     <xacro:property name="camera_mass" value="0.091"/>
     <xacro:property name="camera_x" value="0.023"/>
     <xacro:property name="camera_y" value="0.097"/>
@@ -55,29 +55,31 @@
     <link name="${prefix}_rgb_camera_optical_frame"/>
 
     <!-- Gazebo Harmonic Camera Sensor -->
-    <gazebo reference="${prefix}_frame">
-      <sensor name="${prefix}" type="camera">
-        <gz_frame_id>${prefix}_frame</gz_frame_id>
-        <always_on>1</always_on>
-        <update_rate>${rate}</update_rate>
-        <visualize>true</visualize>
-        <topic>${actual_topic_prefix}/image_raw</topic>
-        <camera>
-          <horizontal_fov>${horizontal_fov}</horizontal_fov>
-          <image>
-            <width>${width}</width>
-            <height>${height}</height>
-            <format>R8G8B8</format>
-          </image>
-          <clip>
-            <near>0.1</near>
-            <far>30.0</far>
-          </clip>
-          <optical_frame_id>${prefix}_rgb_camera_optical_frame</optical_frame_id>
-          <camera_info_topic>${actual_topic_prefix}/camera_info</camera_info_topic>
-        </camera>
-      </sensor>
-    </gazebo>
+    <xacro:if value="${sim_cameras}">
+      <gazebo reference="${prefix}_frame">
+        <sensor name="${prefix}" type="camera">
+          <gz_frame_id>${prefix}_frame</gz_frame_id>
+          <always_on>1</always_on>
+          <update_rate>${rate}</update_rate>
+          <visualize>true</visualize>
+          <topic>${actual_topic_prefix}/image_raw</topic>
+          <camera>
+            <horizontal_fov>${horizontal_fov}</horizontal_fov>
+            <image>
+              <width>${width}</width>
+              <height>${height}</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>30.0</far>
+            </clip>
+            <optical_frame_id>${prefix}_rgb_camera_optical_frame</optical_frame_id>
+            <camera_info_topic>${actual_topic_prefix}/camera_info</camera_info_topic>
+          </camera>
+        </sensor>
+      </gazebo>
+    </xacro:if>
   </xacro:macro>
 
 </robot>

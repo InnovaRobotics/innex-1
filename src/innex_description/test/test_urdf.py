@@ -141,3 +141,11 @@ def test_ouster_os1_lidar(robot):
     assert sensor.find('gz_frame_id').text == 'os_sensor'
     assert int(sensor.find('lidar/scan/vertical/samples').text) == 128
     assert int(sensor.find('lidar/scan/horizontal/samples').text) == 512
+
+
+def test_oak_d_pro_sensors_can_be_disabled():
+    urdf = xacro.process_file(
+        str(URDF_XACRO), mappings={'sim_cameras': 'false'}).toxml()
+    robot = ET.fromstring(urdf)
+
+    assert not robot.findall('gazebo/sensor[@type="camera"]')

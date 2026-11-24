@@ -9,12 +9,18 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     xacro_file = os.path.join( get_package_share_directory('innex_description'), 'urdf', 'innex_1.urdf.xacro' )
-    robot_description = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
+    robot_description = ParameterValue(Command([
+        'xacro ', xacro_file, ' sim_cameras:=', LaunchConfiguration('sim_cameras')]),
+        value_type=str)
 
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time', default_value='false',
             description='Use the Gazebo clock. Set to true in simulation.'
+        ),
+        DeclareLaunchArgument(
+            'sim_cameras', default_value='true',
+            description='Add Gazebo camera sensors to the robot description.'
         ),
         Node(
             package='robot_state_publisher',

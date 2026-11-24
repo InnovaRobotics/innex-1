@@ -33,6 +33,10 @@ install(PROGRAMS scripts/cmd_vel_watchdog.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME cmd_vel_watchdog
 )
+install(PROGRAMS scripts/sim_video_relay.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME sim_video_relay
+)
 
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/innex_sim.dsv.in")
 
