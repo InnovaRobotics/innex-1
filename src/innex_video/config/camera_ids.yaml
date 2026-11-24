@@ -1,11 +1,10 @@
 front_video_relay:
   ros__parameters:
-    # Optional: enter the front camera's DepthAI deviceId. When blank, the
-    # launch file assigns connected unconfigured cameras automatically.
+    # Keep quotes around the OAK deviceId, for example '19443010E16CFB4800'.
+    # Leave blank on the bench when testing with a single camera.
     device_id: ''
 
 rear_video_relay:
   ros__parameters:
-    # Optional: enter the rear camera's DepthAI deviceId. When blank, the
-    # launch file assigns connected unconfigured cameras automatically.
+    # Keep quotes around the OAK deviceId. Required to start the rear stream.
     device_id: ''

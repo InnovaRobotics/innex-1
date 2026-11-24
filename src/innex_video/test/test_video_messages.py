@@ -1,6 +1,7 @@
-"""Tests for camera-independent H.264 message helpers."""
+"""Tests for camera-independent H.264 message and device selection helpers."""
 
 from innex_video.video_messages import make_compressed_video, nal_types
+from innex_video.video_relay import select_device_id
 
 
 def test_nal_types_in_keyframe():
@@ -27,3 +28,32 @@ def test_make_compressed_video():
     assert message.frame_id == 'oak_front_frame'
     assert message.format == 'h264'
     assert bytes(message.data) == data
+
+
+def test_select_device_id_single_bench_camera():
+    selected, reason = select_device_id(['1944A'], allow_auto_device=True)
+    assert selected == '1944A'
+    assert reason is None
+
+    skipped, skip_reason = select_device_id(['1944A'], allow_auto_device=False)
+    assert skipped is None
+    assert 'skipping' in skip_reason
+
+
+def test_select_device_id_refuses_to_guess_two_cameras():
+    selected, reason = select_device_id(
+        ['1944B', '1944A'], allow_auto_device=True)
+    assert selected is None
+    assert '1944A, 1944B' in reason
+
+
+def test_select_device_id_configured_camera():
+    selected, reason = select_device_id(
+        ['1944A', '1944B'], configured_id='1944B')
+    assert selected == '1944B'
+    assert reason is None
+
+    missing, missing_reason = select_device_id(
+        ['1944A'], configured_id='1944B')
+    assert missing is None
+    assert 'not connected' in missing_reason
