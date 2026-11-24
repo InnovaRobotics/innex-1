@@ -98,6 +98,19 @@ Continue with [Install ROS 2 on Ubuntu](setup-ubuntu.md) in the VM. Then come ba
 5. Click the **Topics** tab. The `/chatter` topic shows 1 Hz.
 6. In the VM, press Ctrl+C in both terminals.
 
+## Use an OAK camera in the VM
+
+An OAK camera enumerates as a USB 2.0 device before boot and reconnects as a USB 3.0 device once DepthAI uploads its firmware.
+
+1. Stop the VM. Click **Edit**, then **Input**.
+2. Set **USB Support** to **USB 3.0 (XHCI)**, tick **USB Sharing**, and click **Save**.
+3. Start the VM, click the USB plug icon in the VM toolbar, and select **Movidius MyriadX**.
+4. Start the launch with a 60-second boot window so you have time to attach the rebooted camera:
+   ```bash
+   DEPTHAI_WATCHDOG_INITIAL_DELAY=60000 DEPTHAI_BOOTUP_TIMEOUT=60000 ros2 launch innex_video video.launch.xml
+   ```
+5. Click the USB plug icon a second time and select the booted Luxonis entry that appears.
+
 ## Troubleshooting
 
 | Problem | Fix |
