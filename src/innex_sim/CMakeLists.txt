@@ -2,14 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(innex_sim)
 
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_python REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
-ament_python_install_package(${PROJECT_NAME})
-
-install(PROGRAMS scripts/sim_video_relay
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 set(MESH_DIR ${CMAKE_CURRENT_BINARY_DIR}/models)
 # List the generated files so CMake knows when to rerun the script.
@@ -39,6 +32,10 @@ install(DIRECTORY ${MESH_DIR}/
 install(PROGRAMS scripts/cmd_vel_watchdog.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME cmd_vel_watchdog
+)
+install(PROGRAMS scripts/sim_video_relay.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME sim_video_relay
 )
 
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/innex_sim.dsv.in")

@@ -128,6 +128,10 @@ def generate_launch_description():
             launch_arguments={
                 'port': '8765',
                 'topic_whitelist': "['^/oak_(front|rear)/video$']",
+                'capabilities': '[connectionGraph]',
+                'client_topic_whitelist': "['(?!)']",
+                'service_whitelist': "['(?!)']",
+                'param_whitelist': "['(?!)']",
             }.items(),
         ),
     ])
