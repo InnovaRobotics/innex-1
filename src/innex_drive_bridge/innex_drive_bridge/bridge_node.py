@@ -7,7 +7,7 @@ import time
 
 from geometry_msgs.msg import TwistStamped
 from innex_drive_bridge.control import CommandState
-from innex_drive_bridge.kinematics import Geometry
+from innex_drive_bridge.protocol import MAX_WHEEL_RAD_S
 from innex_drive_bridge.sender import Sender
 from innex_drive_bridge.sequence import SequenceCounter
 from innex_drive_bridge.transport import DryRunTransport, SerialTransport
@@ -34,7 +34,7 @@ class DriveBridge(Node):
             'send_rate_hz': 50.0,
             'wheel_radius_m': 0.154,
             'track_width_m': 0.614,
-            'max_wheel_rad_s': 1.0,
+            'max_wheel_rad_s': MAX_WHEEL_RAD_S,
             'command_frame': 'base_link',
         }
         values = {}
@@ -58,8 +58,8 @@ class DriveBridge(Node):
         # Linux scheduling still needs bench validation; this is not hard real time.
         margin = math.ceil((1.0 / rate + 0.015) * 1e9)
         self.state = CommandState(
-            Geometry(values['wheel_radius_m'], values['track_width_m'],
-                     values['max_wheel_rad_s']), values['command_frame'], margin)
+            values['wheel_radius_m'], values['track_width_m'],
+            values['max_wheel_rad_s'], values['command_frame'], margin)
         counter = SequenceCounter(
             None if self.dry_run else values['sequence_state_file'])
         try:

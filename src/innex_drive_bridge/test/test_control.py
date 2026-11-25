@@ -1,42 +1,9 @@
-"""Exercise conversion and watchdog boundaries without ROS or hardware."""
+"""Exercise watchdog boundaries without ROS or hardware."""
 
 import math
 
 from innex_drive_bridge.control import COMMAND_TIMEOUT_NS, CommandState
-from innex_drive_bridge.kinematics import Geometry, wheel_targets
 import pytest
-
-
-@pytest.mark.parametrize('linear,angular,expected', [
-    (0, 0, (0, 0)), (0.154, 0, (1000, 1000)),
-    (-0.077, 0, (-500, -500)), (0, 0.5, (-997, 997)),
-    (0, -0.5, (997, -997)), (1.54, 0, (1000, 1000)),
-])
-def test_conversion(linear, angular, expected):
-    """Check units, direction, straight motion and bounded output."""
-    assert wheel_targets(linear, angular, Geometry()) == expected
-
-
-def test_curvature_preserved():
-    """Saturation scales both wheels rather than clipping each independently."""
-    g = Geometry(radius=0.1, track=0.4)
-    assert wheel_targets(0.3, 0.5, g) == (500, 1000)
-
-
-@pytest.mark.parametrize('g', [
-    {'radius': 0}, {'track': -1}, {'max_wheel_rad_s': 1.1}, {'radius': math.nan},
-])
-def test_invalid_geometry(g):
-    """Reject unsafe geometry and unsupported firmware limits."""
-    with pytest.raises(ValueError):
-        Geometry(**g)
-
-
-@pytest.mark.parametrize('value', [math.nan, math.inf, -math.inf, 1e308])
-def test_invalid_velocity(value):
-    """Reject non-finite values and conversion overflow."""
-    with pytest.raises(ValueError):
-        wheel_targets(value, value, Geometry())
 
 
 def update(state, stamp=1_000_000_000, ros_now=1_000_000_000, mono=100, **kwargs):

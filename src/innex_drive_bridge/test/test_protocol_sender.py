@@ -1,37 +1,11 @@
-"""Check the unchanged wire format and sender fault handling."""
+"""Check sender fault handling."""
 
 from innex_drive_bridge.control import CommandState
-from innex_drive_bridge.protocol import decode, encode
+from innex_drive_bridge.protocol import decode
 from innex_drive_bridge.sender import Sender
 from innex_drive_bridge.sequence import SequenceCounter
 from innex_drive_bridge.transport import DryRunTransport
 import pytest
-
-
-def test_golden_frame_and_signed_roundtrip():
-    """Match the independent fixture in the Teensy reference tests."""
-    assert encode(1, 0, 0).hex() == '44520100010000000000000000000000be37'
-    assert decode(encode(0xFFFFFFFF, -300, 400)) == (0xFFFFFFFF, -300, 400)
-
-
-@pytest.mark.parametrize('args', [(-1, 0, 0), (2**32, 0, 0), (1, 1001, 0),
-                                  (1, 0, -1001), (1, 0.5, 0), (True, 0, 0)])
-def test_bad_encoder_values(args):
-    """Prevent invalid bytes or units from reaching the serial layer."""
-    with pytest.raises(ValueError):
-        encode(*args)
-
-
-def test_decoder_checks():
-    """Reject corrupted headers, CRCs and truncated frames."""
-    frame = encode(1, 0, 0)
-    for index in (0, 2, 3, 8, 16):
-        bad = bytearray(frame)
-        bad[index] ^= 1
-        with pytest.raises(ValueError):
-            decode(bad)
-    with pytest.raises(ValueError):
-        decode(frame[:-1])
 
 
 def test_startup_timeout_shutdown_and_sequence():

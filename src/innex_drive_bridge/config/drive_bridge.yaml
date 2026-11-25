@@ -9,6 +9,4 @@ drive_bridge:
     # Provisional geometry from innex_description, not measured rover values.
     wheel_radius_m: 0.154
     track_width_m: 0.614
-    # Preserve the +/-1000 mrad/s firmware prototype bound.
-    max_wheel_rad_s: 1.0
     command_frame: base_link
