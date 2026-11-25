@@ -1,3 +1,4 @@
+import importlib.util
 import math
 import subprocess
 import sys
@@ -12,6 +13,16 @@ WORLD = PACKAGE_DIR / 'worlds' / 'moon_yard.sdf'
 
 ARENA_LENGTH = 7.9
 ARENA_WIDTH = 4.4
+
+
+def load_generator():
+    spec = importlib.util.spec_from_file_location('generate_assets', GENERATOR)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+CRATERS = load_generator().CRATERS
 
 
 class Rect(NamedTuple):

@@ -24,12 +24,13 @@ Use the Ubuntu 24.04 desktop. Gazebo opens its window on the desktop.
 
 1. Install ROS 2 Jazzy, the build tools, Gazebo and the Foxglove bridge:
    ```bash
-   sudo apt install -y ros-jazzy-desktop ros-dev-tools ros-jazzy-ros-gz ros-jazzy-foxglove-bridge
+   sudo apt install -y ros-jazzy-desktop ros-dev-tools ros-jazzy-ros-gz ros-jazzy-foxglove-bridge python3-av
    ```
    - `ros-jazzy-desktop` installs ROS 2 Jazzy with its GUI tools.
    - `ros-dev-tools` installs the tools for building ROS packages.
    - `ros-jazzy-ros-gz` installs Gazebo Harmonic, the version that Jazzy uses.
    - `ros-jazzy-foxglove-bridge` installs the Foxglove bridge.
+   - `python3-av` installs PyAV, which encodes simulated camera feeds as H.264.
 2. Load ROS 2 in every new terminal:
    ```bash
    echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
