@@ -13,6 +13,7 @@ import {
   renderHardwareConnectionsDiagram,
   renderSubsystemLoopDiagram,
 } from "./diagrams.mjs";
+import { GLOSSARY_VISUALS } from "./glossary-visuals.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -66,6 +67,10 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;");
 }
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function smartTypography(text) {
   return text
     .replace(/\.\.\./g, "…")
@@ -89,11 +94,117 @@ function repoRelToOutRel(repoRel) {
   if (repoRel.startsWith("docs/")) {
     return repoRel.replace(/\.md$/i, ".html");
   }
-  // src/<pkg>/README.md or firmware/<pkg>/PROTOCOL.md
   const parts = repoRel.split("/");
   const base = parts[parts.length - 1];
-  const stem = base.toLowerCase() === "readme.md" ? "index" : base.replace(/\.md$/i, "").toLowerCase();
+  const stem =
+    base.toLowerCase() === "readme.md" ? "index" : base.replace(/\.md$/i, "").toLowerCase();
   return path.posix.join("packages", ...parts.slice(1, -1), `${stem}.html`);
+}
+
+function parseGlossaryCatalogue() {
+  const glossaryPath = path.join(REPO_ROOT, "docs/glossary.md");
+  const raw = fs.readFileSync(glossaryPath, "utf8").replace(/\r\n/g, "\n");
+  const sections = raw.split(/^##\s+/m).slice(1);
+
+  const entries = {};
+  const matchers = [];
+
+  for (const sec of sections) {
+    const lines = sec.split("\n");
+    const title = lines[0].trim();
+    const slug = slugify(title);
+    let subtitle = "";
+    const aliases = [];
+
+    let bodyStart = 1;
+    for (let k = 1; k < lines.length; k++) {
+      const trimmed = lines[k].trim();
+      if (!trimmed) continue;
+      const metaMatch = trimmed.match(/^<!--\s*(.*?)\s*-->$/);
+      if (metaMatch) {
+        const parts = metaMatch[1].split("|").map((s) => s.trim());
+        for (const p of parts) {
+          if (p.startsWith("subtitle:")) {
+            subtitle = p.slice("subtitle:".length).trim();
+          } else if (p.startsWith("aliases:")) {
+            for (const a of p.slice("aliases:".length).split(",")) {
+              if (a.trim()) aliases.push(a.trim());
+            }
+          }
+        }
+        bodyStart = k + 1;
+      }
+      break;
+    }
+
+    const rawBody = lines
+      .slice(bodyStart)
+      .join(" ")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Extract first external https:// link if present for the card footer
+    let extUrl = "";
+    let extLabel = "";
+    for (const lm of rawBody.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g)) {
+      extLabel = lm[1].replace(/`([^`]+)`/g, "$1").trim();
+      extUrl = lm[2].trim();
+      break;
+    }
+
+    // Strip trailing "See ..." cross-reference sentence from the compact card summary
+    let summaryMd = rawBody.replace(/\s*See\s+\[[^\n]+$/, "").trim();
+    if (subtitle) {
+      const leadPrefix = new RegExp(`^${escapeRegex(subtitle)},\\s+`, "i");
+      if (leadPrefix.test(summaryMd)) {
+        summaryMd = summaryMd.replace(leadPrefix, "");
+        summaryMd = summaryMd.charAt(0).toUpperCase() + summaryMd.slice(1);
+      }
+    }
+    const codeSpans = [];
+    let summaryHtml = summaryMd.replace(/`([^`]+)`/g, (_, c) => {
+      const idx = codeSpans.length;
+      codeSpans.push(`<code>${escapeHtml(c)}</code>`);
+      return `\u0000C${idx}\u0000`;
+    });
+    summaryHtml = summaryHtml.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    summaryHtml = smartTypography(escapeHtml(summaryHtml));
+    summaryHtml = summaryHtml.replace(/\u0000C(\d+)\u0000/g, (_, idx) => codeSpans[Number(idx)]);
+
+    entries[slug] = {
+      slug,
+      title,
+      subtitle,
+      bodyHtml: summaryHtml,
+      visual: GLOSSARY_VISUALS[slug] || "",
+      extUrl,
+      extLabel,
+    };
+
+    const candidatePhrases = new Set([title, ...aliases]);
+    for (const phrase of [...candidatePhrases]) {
+      // Add simple plural for regular multi-letter English nouns
+      if (/^[A-Za-z][a-z]{3,}$/.test(phrase) && !phrase.endsWith("s")) {
+        candidatePhrases.add(`${phrase}s`);
+      }
+    }
+
+    for (const phrase of candidatePhrases) {
+      // Skip overly generic common words unless capitalised or domain-specific
+      if (/^(action|actions|node|nodes|message|topic|frame|bridge)$/i.test(phrase)) {
+        continue;
+      }
+      const isCaseSensitive = /^[A-Z0-9\s-]{2,8}$/.test(phrase) || phrase === "LiDAR";
+      const flags = isCaseSensitive ? "g" : "gi";
+      const regex = new RegExp(`(?<![\\w/-])(${escapeRegex(phrase)})(?![\\w/-])`, flags);
+      matchers.push({ slug, phrase, length: phrase.length, regex });
+    }
+  }
+
+  // Match longest phrases first ("LiDAR odometry" before "LiDAR" or "odometry")
+  matchers.sort((a, b) => b.length - a.length);
+  return { entries, matchers };
 }
 
 function discoverDocs() {
@@ -103,7 +214,6 @@ function discoverDocs() {
     if (fs.existsSync(path.join(REPO_ROOT, rootFile))) found.add(rootFile);
   }
 
-  // Scan docs/ and docs/system/ dynamically so any newly added or uploaded .md file appears automatically
   function scanDir(relDir) {
     const abs = path.join(REPO_ROOT, relDir);
     if (!fs.existsSync(abs)) return;
@@ -118,7 +228,6 @@ function discoverDocs() {
   }
   scanDir("docs");
 
-  // Scan src/*/ and firmware/*/ for package READMEs and protocol specs
   for (const parentDir of ["src", "firmware"]) {
     const absParent = path.join(REPO_ROOT, parentDir);
     if (!fs.existsSync(absParent)) continue;
@@ -167,7 +276,6 @@ function discoverDocs() {
     ],
     (r) => r.startsWith("src/") || r.startsWith("firmware/")
   );
-  // Any remaining unassigned docs/ files land automatically in Reference (or Docs)
   const refItems = takeOrdered(REF_ORDER, () => true);
 
   const groups = [
@@ -220,8 +328,14 @@ function resolveDocHref(rawHref, currentPage, pageMap) {
   return hashPart ? `${href}#${hashPart}` : href;
 }
 
-function formatInline(raw, currentPage, pageMap) {
-  const codeSpans = [];
+function formatInline(raw, currentPage, pageMap, glossaryCtx = null) {
+  const protectedTokens = [];
+  function stash(htmlFragment) {
+    const idx = protectedTokens.length;
+    protectedTokens.push(htmlFragment);
+    return `\u0000TOK${idx}\u0000`;
+  }
+
   const plainMeasurementRe =
     /^-?\d+(?:\.\d+)?\s*(?:m|cm|mm)?(?:\s*(?:x|×|\/|\*|=|-)\s*-?\d+(?:\.\d+)?\s*(?:m|cm|mm)?)?\s*(?:m|cm|mm|ms|s|W|Wh|kg|Hz|kbps|degrees?|per cent|m\^2)?$/i;
 
@@ -231,30 +345,54 @@ function formatInline(raw, currentPage, pageMap) {
         .replace(/\s+x\s+/g, "\u00a0×\u00a0")
         .replace(/m\^2/g, "m²")
         .replace(/\s+(m|cm|mm|ms|s|W|Wh|kg|Hz|kbps|m²)\b/g, "\u00a0$1");
-      const idx = codeSpans.length;
-      codeSpans.push(cleanQty);
-      return `\u0000CODE${idx}\u0000`;
+      return stash(cleanQty);
     }
-    const idx = codeSpans.length;
     const formattedCode = escapeHtml(code).replace(/ -&gt; /g, " → ");
-    codeSpans.push(`<code>${formattedCode}</code>`);
-    return `\u0000CODE${idx}\u0000`;
+    return stash(`<code>${formattedCode}</code>`);
   });
 
-  // Auto-link bare <https://...> angle-bracket URLs
   text = text.replace(/<(https?:\/\/[^>]+)>/g, "[$1]($1)");
-
   text = escapeHtml(text);
   text = smartTypography(text);
 
+  // Protect links and bold inline definitions before auto-matching glossary terms
   text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
     const resolved = resolveDocHref(href, currentPage, pageMap);
-    return `<a href="${resolved}">${label}</a>`;
+    return stash(`<a href="${resolved}">${label}</a>`);
   });
-  text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/\*\*([^*]+)\*\*/g, (_, inner) => {
+    // If a paragraph explicitly defines a term in bold ("is called **odometry**"), mark that concept as already seen on the page!
+    if (glossaryCtx) {
+      for (const m of glossaryCtx.matchers) {
+        m.regex.lastIndex = 0;
+        if (m.regex.test(inner) && inner.trim().length <= m.phrase.length + 6) {
+          glossaryCtx.seen.add(m.slug);
+        }
+      }
+    }
+    return stash(`<strong>${inner}</strong>`);
+  });
   text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
 
-  text = text.replace(/\u0000CODE(\d+)\u0000/g, (_, idx) => codeSpans[Number(idx)]);
+  // Auto-match first occurrence per page of glossary terms in plain prose
+  if (glossaryCtx && currentPage.repoRel !== "docs/glossary.md") {
+    const glossaryHref = relativeHref(currentPage.outRel, "docs/glossary.html");
+    for (const m of glossaryCtx.matchers) {
+      if (glossaryCtx.seen.has(m.slug)) continue;
+      m.regex.lastIndex = 0;
+      let matchedOnce = false;
+      text = text.replace(m.regex, (match) => {
+        if (matchedOnce) return match;
+        matchedOnce = true;
+        glossaryCtx.seen.add(m.slug);
+        return stash(
+          `<a class="glossary-term" href="${glossaryHref}#${m.slug}" data-term="${m.slug}">${match}</a>`
+        );
+      });
+    }
+  }
+
+  text = text.replace(/\u0000TOK(\d+)\u0000/g, (_, idx) => protectedTokens[Number(idx)]);
   return text;
 }
 
@@ -267,7 +405,7 @@ function parseTableRow(line) {
     .map((c) => c.trim());
 }
 
-function parseListBlock(lines, startIdx, ordered, currentPage, pageMap) {
+function parseListBlock(lines, startIdx, ordered, currentPage, pageMap, glossaryCtx) {
   const itemMarkerRe = ordered ? /^\s*\d+\.\s+(.*)$/ : /^\s*-\s+(.*)$/;
   const items = [];
   let i = startIdx;
@@ -276,13 +414,12 @@ function parseListBlock(lines, startIdx, ordered, currentPage, pageMap) {
     const m = lines[i].match(itemMarkerRe);
     if (!m) break;
 
-    const itemParts = [`<p>${formatInline(m[1].trim(), currentPage, pageMap)}</p>`];
+    const itemParts = [`<p>${formatInline(m[1].trim(), currentPage, pageMap, glossaryCtx)}</p>`];
     i++;
 
     while (i < lines.length) {
       const cur = lines[i];
       if (!cur.trim()) {
-        // Look ahead to see if indented continuation or next list item follows
         if (i + 1 < lines.length && (/^\s{2,}/.test(lines[i + 1]) || itemMarkerRe.test(lines[i + 1]))) {
           i++;
           continue;
@@ -309,7 +446,7 @@ function parseListBlock(lines, startIdx, ordered, currentPage, pageMap) {
         const subItems = [];
         while (i < lines.length && subRe.test(lines[i])) {
           const sm = lines[i].match(subRe);
-          subItems.push(`<li>${formatInline(sm[1].trim(), currentPage, pageMap)}</li>`);
+          subItems.push(`<li>${formatInline(sm[1].trim(), currentPage, pageMap, glossaryCtx)}</li>`);
           i++;
         }
         const tag = subOrdered ? "ol" : "ul";
@@ -329,14 +466,13 @@ function parseListBlock(lines, startIdx, ordered, currentPage, pageMap) {
           cont.push(lines[i].trim());
           i++;
         }
-        itemParts.push(`<p>${formatInline(cont.join(" "), currentPage, pageMap)}</p>`);
+        itemParts.push(`<p>${formatInline(cont.join(" "), currentPage, pageMap, glossaryCtx)}</p>`);
         continue;
       }
 
       break;
     }
 
-    // Simplify single-paragraph list items so spacing stays compact
     if (itemParts.length === 1 && itemParts[0].startsWith("<p>")) {
       items.push(`<li>${itemParts[0].slice(3, -4)}</li>`);
     } else {
@@ -348,7 +484,7 @@ function parseListBlock(lines, startIdx, ordered, currentPage, pageMap) {
   return { html: `<${tag}>\n${items.join("\n")}\n</${tag}>`, nextIdx: i };
 }
 
-function parseMarkdown(md, currentPage, pageMap) {
+function parseMarkdown(md, currentPage, pageMap, glossaryCatalogue) {
   const cleaned = md.replace(/<!--[\s\S]*?-->/g, "").replace(/\r\n/g, "\n");
   const lines = cleaned.split("\n");
   const htmlParts = [];
@@ -356,6 +492,10 @@ function parseMarkdown(md, currentPage, pageMap) {
   let currentH2Section = null;
   let currentH3 = "";
   let i = 0;
+
+  const glossaryCtx = glossaryCatalogue
+    ? { matchers: glossaryCatalogue.matchers, seen: new Set() }
+    : null;
 
   while (i < lines.length) {
     const line = lines[i];
@@ -365,7 +505,6 @@ function parseMarkdown(md, currentPage, pageMap) {
       continue;
     }
 
-    // Fenced code / diagram blocks
     if (line.startsWith("```")) {
       const lang = line.slice(3).trim();
       const blockLines = [];
@@ -413,7 +552,6 @@ function parseMarkdown(md, currentPage, pageMap) {
       continue;
     }
 
-    // Tables
     if (line.trim().startsWith("|") && i + 1 < lines.length && /^\s*\|[\s:-]+\|/.test(lines[i + 1])) {
       const headers = parseTableRow(lines[i]);
       i += 2;
@@ -423,13 +561,13 @@ function parseMarkdown(md, currentPage, pageMap) {
         i++;
       }
       const thead = `<thead><tr>${headers
-        .map((h) => `<th>${formatInline(h, currentPage, pageMap)}</th>`)
+        .map((h) => `<th>${formatInline(h, currentPage, pageMap, null)}</th>`)
         .join("")}</tr></thead>`;
       const tbody = `<tbody>${bodyRows
         .map(
           (row) =>
             `<tr>${row
-              .map((cell) => `<td>${formatInline(cell, currentPage, pageMap)}</td>`)
+              .map((cell) => `<td>${formatInline(cell, currentPage, pageMap, glossaryCtx)}</td>`)
               .join("")}</tr>`
         )
         .join("")}</tbody>`;
@@ -437,19 +575,17 @@ function parseMarkdown(md, currentPage, pageMap) {
       continue;
     }
 
-    // Blockquotes
     if (line.startsWith(">")) {
       const qLines = [];
       while (i < lines.length && lines[i].startsWith(">")) {
         qLines.push(lines[i].replace(/^>\s?/, ""));
         i++;
       }
-      const inner = parseMarkdown(qLines.join("\n"), currentPage, pageMap).bodyHtml;
+      const inner = parseMarkdown(qLines.join("\n"), currentPage, pageMap, null).bodyHtml;
       htmlParts.push(`<blockquote class="math-block">${inner}</blockquote>`);
       continue;
     }
 
-    // Headings
     const hMatch = line.match(/^(#{1,4})\s+(.*)$/);
     if (hMatch) {
       const depth = Math.min(3, hMatch[1].length);
@@ -467,26 +603,26 @@ function parseMarkdown(md, currentPage, pageMap) {
           currentH2Section.children.push({ id, title: cleanTitle });
         }
       }
-      htmlParts.push(`<h${depth} id="${id}">${formatInline(rawTitle, currentPage, pageMap)}</h${depth}>`);
+      htmlParts.push(
+        `<h${depth} id="${id}">${formatInline(rawTitle, currentPage, pageMap, null)}</h${depth}>`
+      );
       i++;
       continue;
     }
 
-    // Lists
     if (/^\s*-\s+/.test(line)) {
-      const { html, nextIdx } = parseListBlock(lines, i, false, currentPage, pageMap);
+      const { html, nextIdx } = parseListBlock(lines, i, false, currentPage, pageMap, glossaryCtx);
       htmlParts.push(html);
       i = nextIdx;
       continue;
     }
     if (/^\s*\d+\.\s+/.test(line)) {
-      const { html, nextIdx } = parseListBlock(lines, i, true, currentPage, pageMap);
+      const { html, nextIdx } = parseListBlock(lines, i, true, currentPage, pageMap, glossaryCtx);
       htmlParts.push(html);
       i = nextIdx;
       continue;
     }
 
-    // Paragraph
     const paraLines = [];
     while (
       i < lines.length &&
@@ -502,7 +638,7 @@ function parseMarkdown(md, currentPage, pageMap) {
       i++;
     }
     const paraText = paraLines.join(" ");
-    htmlParts.push(`<p>${formatInline(paraText, currentPage, pageMap)}</p>`);
+    htmlParts.push(`<p>${formatInline(paraText, currentPage, pageMap, glossaryCtx)}</p>`);
 
     if (
       currentPage.repoRel === "docs/system/localisation.md" &&
@@ -591,6 +727,191 @@ function renderToc(tocSections, pageLabel) {
     </aside>`;
 }
 
+function writeGlossaryClientScript(entries) {
+  const script = `(() => {
+  const GLOSSARY = ${JSON.stringify(entries)};
+  const triggers = [...document.querySelectorAll("a.glossary-term[data-term]")];
+  if (!triggers.length) return;
+
+  const popover = document.createElement("div");
+  popover.className = "glossary-popover";
+  popover.id = "glossary-popover";
+  popover.setAttribute("role", "tooltip");
+  popover.setAttribute("aria-hidden", "true");
+  document.body.appendChild(popover);
+
+  let activeTrigger = null;
+  let openTimer = 0;
+  let closeTimer = 0;
+  let lastClosedAt = 0;
+
+  function renderCardContent(entry, glossaryHref) {
+    const visualBlock = entry.visual
+      ? \`<div class="gp-visual">\${entry.visual}</div>\`
+      : "";
+    const subtitleBlock = entry.subtitle
+      ? \`<p class="gp-subtitle">\${entry.subtitle}</p>\`
+      : "";
+    const extBlock = entry.extUrl
+      ? \`<a href="\${entry.extUrl}" target="_blank" rel="noopener noreferrer">\${entry.extLabel} ↗</a>\`
+      : "";
+
+    popover.innerHTML = \`
+      \${visualBlock}
+      <div class="gp-content">
+        <p class="gp-title">\${entry.title}</p>
+        \${subtitleBlock}
+        <p class="gp-body">\${entry.bodyHtml}</p>
+      </div>
+      <div class="gp-footer">
+        <a href="\${glossaryHref}">Glossary entry →</a>
+        \${extBlock}
+      </div>
+    \`;
+  }
+
+  function positionCard(trigger) {
+    const rect = trigger.getBoundingClientRect();
+    const cardW = popover.offsetWidth || 344;
+    const cardH = popover.offsetHeight || 220;
+    const margin = 16;
+    const gap = 9;
+
+    const triggerCenterX = rect.left + rect.width / 2;
+    let left = triggerCenterX - cardW / 2;
+    left = Math.max(margin, Math.min(window.innerWidth - cardW - margin, left));
+
+    const spaceBelow = window.innerHeight - rect.bottom - margin;
+    const placeAbove = spaceBelow < cardH + gap && rect.top > cardH + gap;
+    const top = placeAbove ? rect.top - cardH - gap : rect.bottom + gap;
+
+    const originX = Math.max(16, Math.min(cardW - 16, triggerCenterX - left));
+    popover.dataset.placement = placeAbove ? "above" : "below";
+    popover.style.transformOrigin = \`\${originX.toFixed(0)}px \${placeAbove ? "bottom" : "top"}\`;
+    popover.style.left = \`\${left.toFixed(1)}px\`;
+    popover.style.top = \`\${top.toFixed(1)}px\`;
+  }
+
+  function openFor(trigger) {
+    const slug = trigger.dataset.term;
+    const entry = GLOSSARY[slug];
+    if (!entry) return;
+
+    clearTimeout(closeTimer);
+    if (activeTrigger && activeTrigger !== trigger) {
+      activeTrigger.removeAttribute("data-open");
+      activeTrigger.removeAttribute("aria-describedby");
+    }
+
+    activeTrigger = trigger;
+    trigger.setAttribute("data-open", "true");
+    trigger.setAttribute("aria-describedby", "glossary-popover");
+    renderCardContent(entry, trigger.getAttribute("href"));
+    popover.setAttribute("aria-hidden", "false");
+    positionCard(trigger);
+    requestAnimationFrame(() => {
+      popover.classList.add("is-visible");
+    });
+  }
+
+  function closeCard() {
+    clearTimeout(openTimer);
+    clearTimeout(closeTimer);
+    if (!activeTrigger) return;
+    activeTrigger.removeAttribute("data-open");
+    activeTrigger.removeAttribute("aria-describedby");
+    activeTrigger = null;
+    lastClosedAt = performance.now();
+    popover.classList.remove("is-visible");
+    popover.setAttribute("aria-hidden", "true");
+  }
+
+  function scheduleClose() {
+    clearTimeout(openTimer);
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(closeCard, 130);
+  }
+
+  for (const trigger of triggers) {
+    trigger.addEventListener("pointerenter", (e) => {
+      if (e.pointerType === "touch") return;
+      clearTimeout(closeTimer);
+      clearTimeout(openTimer);
+      const warm = activeTrigger !== null || performance.now() - lastClosedAt < 450;
+      const delay = warm ? 0 : 260;
+      if (delay === 0) {
+        openFor(trigger);
+      } else {
+        openTimer = setTimeout(() => openFor(trigger), delay);
+      }
+    });
+
+    trigger.addEventListener("pointerleave", (e) => {
+      if (e.pointerType === "touch") return;
+      scheduleClose();
+    });
+
+    // Touch devices: first tap opens preview card; tapping inside card or second tap navigates
+    trigger.addEventListener("click", (e) => {
+      const coarse = window.matchMedia("(hover: none)").matches;
+      if (coarse && activeTrigger !== trigger) {
+        e.preventDefault();
+        openFor(trigger);
+      }
+    });
+
+    trigger.addEventListener("focus", () => {
+      if (!trigger.matches(":focus-visible")) return;
+      clearTimeout(closeTimer);
+      clearTimeout(openTimer);
+      openTimer = setTimeout(() => openFor(trigger), 180);
+    });
+
+    trigger.addEventListener("blur", () => {
+      scheduleClose();
+    });
+  }
+
+  popover.addEventListener("pointerenter", () => {
+    clearTimeout(closeTimer);
+  });
+
+  popover.addEventListener("pointerleave", () => {
+    scheduleClose();
+  });
+
+  document.addEventListener("pointerdown", (e) => {
+    if (!activeTrigger) return;
+    if (!popover.contains(e.target) && !activeTrigger.contains(e.target)) {
+      closeCard();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && activeTrigger) {
+      closeCard();
+    }
+  });
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (activeTrigger) positionCard(activeTrigger);
+    },
+    { passive: true }
+  );
+  window.addEventListener(
+    "resize",
+    () => {
+      if (activeTrigger) positionCard(activeTrigger);
+    },
+    { passive: true }
+  );
+})();
+`;
+  fs.writeFileSync(path.join(DIST_DIR, "glossary-card.js"), script, "utf8");
+}
+
 function copyStaticAssets() {
   fs.mkdirSync(DIST_DIR, { recursive: true });
   fs.copyFileSync(path.join(__dirname, "styles.css"), path.join(DIST_DIR, "styles.css"));
@@ -605,14 +926,17 @@ function copyStaticAssets() {
 
 function buildAllPages() {
   copyStaticAssets();
+  const glossaryCatalogue = parseGlossaryCatalogue();
+  writeGlossaryClientScript(glossaryCatalogue.entries);
   const { groups, pageMap, flatOrder } = discoverDocs();
 
   flatOrder.forEach((page, idx) => {
-    const { bodyHtml, tocSections } = parseMarkdown(page.md, page, pageMap);
+    const { bodyHtml, tocSections } = parseMarkdown(page.md, page, pageMap, glossaryCatalogue);
     const sidebarHtml = renderSidebar(groups, page);
     const tocHtml = renderToc(tocSections, page.label);
 
     const cssHref = relativeHref(page.outRel, "styles.css");
+    const glossaryScriptHref = relativeHref(page.outRel, "glossary-card.js");
     const homeHref = relativeHref(page.outRel, "index.html");
     const rulesHref = relativeHref(page.outRel, "docs/rules.html");
     const glossaryHref = relativeHref(page.outRel, "docs/glossary.html");
@@ -690,11 +1014,11 @@ function buildAllPages() {
     ${tocHtml}
   </div>
 
+  <script src="${glossaryScriptHref}" defer></script>
   <script>
     (() => {
       const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      // 1. Wikiwand-style right TOC with gliding active dot and collapsible subsections
       const tocList = document.getElementById("toc-list");
       const tocDot = document.getElementById("toc-dot");
       const tocLinks = [...document.querySelectorAll(".toc-link")];
@@ -764,7 +1088,6 @@ function buildAllPages() {
         updateTocOnScroll();
       }
 
-      // 2. Interactive Kalman filter explorer with smooth interruptible ease-out transitions
       const sliderPred = document.getElementById("slider-pred");
       const sliderMeas = document.getElementById("slider-meas");
       if (!sliderPred || !sliderMeas) return;
@@ -796,7 +1119,6 @@ function buildAllPages() {
       let animState = { sPred: 0.30, sMeas: 0.10 };
       let rafId = 0;
 
-      // Strong ease-out matching --ease-out: cubic-bezier(0.23, 1, 0.32, 1)
       function easeOutStrong(t) {
         return 1 - Math.pow(1 - t, 3.6);
       }
