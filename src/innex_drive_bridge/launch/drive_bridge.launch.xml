@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="config"
+       default="$(find-pkg-share innex_drive_bridge)/config/drive_bridge.yaml"
+       description="YAML parameter file for drive_bridge." />
+
+  <node pkg="innex_drive_bridge" exec="drive_bridge" name="drive_bridge"
+        output="screen" on_exit="shutdown">
+    <param from="$(var config)" />
+  </node>
+</launch>
