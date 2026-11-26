@@ -6,10 +6,13 @@
   <arg name="sim_cameras"
        default="true"
        description="Add Gazebo camera sensors to the robot description." />
+  <arg name="sim_lidar"
+       default="true"
+       description="Add Gazebo LiDAR sensor to the robot description." />
 
   <node pkg="robot_state_publisher" exec="robot_state_publisher" output="screen">
     <param name="robot_description"
-           value="$(command 'xacro $(find-pkg-share innex_description)/urdf/innex_1.urdf.xacro sim_cameras:=$(var sim_cameras)')"
+           value="$(command 'xacro $(find-pkg-share innex_description)/urdf/innex_1.urdf.xacro sim_cameras:=$(var sim_cameras) sim_lidar:=$(var sim_lidar)')"
            type="str" />
     <param name="use_sim_time" value="$(var use_sim_time)" />
   </node>

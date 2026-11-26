@@ -2,27 +2,44 @@
 <robot name="innex_1" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
   <xacro:arg name="sim_cameras" default="true"/>
+  <xacro:arg name="sim_lidar" default="true"/>
 
   <!-- Will replace with proper values when rover is measured -->
-  <xacro:property name="chassis_length" value="1.000"/>
-  <xacro:property name="chassis_width" value="0.430"/>
-  <xacro:property name="chassis_height" value="0.480"/>
-  <xacro:property name="chassis_ground_clearance" value="0.240"/>
-  <xacro:property name="chassis_x_offset" value="0.107"/>
-  <xacro:property name="wheel_radius" value="0.154"/>
+  <xacro:property name="chassis_length" value="1.060"/>
+  <xacro:property name="chassis_width" value="0.470"/>
+  <xacro:property name="chassis_height" value="0.530"/>
+  <xacro:property name="chassis_ground_clearance" value="0.180"/>
+  <xacro:property name="chassis_x_offset" value="0.024"/>
+  <xacro:property name="rail_size" value="0.030"/>
+  <xacro:property name="edge_radius" value="${rail_size / 2}"/>
+  <xacro:property name="lidar_riser_height" value="0.230"/>
+  <xacro:property name="ladder_overhang" value="0.150"/>
+  <xacro:property name="ladder_width" value="0.165"/>
+  <xacro:property name="wheel_radius" value="0.153"/>
   <xacro:property name="wheel_width" value="0.125"/>
-  <xacro:property name="wheelbase" value="0.705"/>
-  <xacro:property name="track" value="0.614"/>
+  <xacro:property name="front_axle_x" value="0.5385"/>
+  <xacro:property name="rear_axle_x" value="-0.5140"/>
+  <xacro:property name="wheelbase" value="${front_axle_x - rear_axle_x}"/>
+  <xacro:property name="track" value="0.675"/>
 
   <!-- will get proper masses when rover is weighed -->
-  <xacro:property name="chassis_mass" value="56.0"/>
-  <xacro:property name="wheel_mass" value="1.0"/>
+  <xacro:property name="chassis_mass" value="51.0"/>
+  <xacro:property name="wheel_mass" value="1.14"/>
 
   <material name="carbon">
-    <color rgba="0.18 0.18 0.2 1"/>
+    <color rgba="0.20 0.21 0.23 1"/>
+  </material>
+  <material name="panel">
+    <color rgba="0.52 0.55 0.60 1"/>
+  </material>
+  <material name="bed">
+    <color rgba="0.28 0.29 0.32 1"/>
   </material>
   <material name="tyre">
-    <color rgba="0.05 0.05 0.05 1"/>
+    <color rgba="0.07 0.07 0.08 1"/>
+  </material>
+  <material name="paddle">
+    <color rgba="0.16 0.16 0.18 1"/>
   </material>
   <material name="hub">
     <color rgba="0.7 0.7 0.72 1"/>
@@ -37,6 +54,68 @@
              izz="${mass / 12 * (x * x + y * y)}"/>
   </xacro:macro>
 
+  <xacro:macro name="rounded_long_edge" params="edge_name y_sign z_sign">
+    <visual name="${edge_name}_edge">
+      <origin xyz="0 ${y_sign * (chassis_width / 2 - edge_radius)} ${z_sign * (chassis_height / 2 - edge_radius)}" rpy="0 ${pi / 2} 0"/>
+      <geometry>
+        <cylinder radius="${edge_radius}" length="${chassis_length - 2 * edge_radius}"/>
+      </geometry>
+      <material name="panel"/>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="rounded_corner_post" params="post_name x_sign y_sign">
+    <visual name="${post_name}_post">
+      <origin xyz="${x_sign * (chassis_length / 2 - edge_radius)} ${y_sign * (chassis_width / 2 - edge_radius)} 0"/>
+      <geometry>
+        <cylinder radius="${edge_radius}" length="${chassis_height - 2 * edge_radius}"/>
+      </geometry>
+      <material name="panel"/>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="rounded_cross_edge" params="edge_name x_sign z_sign">
+    <visual name="${edge_name}_cross">
+      <origin xyz="${x_sign * (chassis_length / 2 - edge_radius)} 0 ${z_sign * (chassis_height / 2 - edge_radius)}" rpy="${pi / 2} 0 0"/>
+      <geometry>
+        <cylinder radius="${edge_radius}" length="${chassis_width - 2 * edge_radius}"/>
+      </geometry>
+      <material name="panel"/>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="lidar_strut" params="strut_name x_sign y_sign">
+    <visual name="lidar_strut_${strut_name}">
+      <origin xyz="${x_sign * 0.052} ${y_sign * 0.052} ${chassis_height / 2 + lidar_riser_height / 2 - 0.004}"/>
+      <geometry>
+        <box size="0.010 0.010 ${lidar_riser_height - 0.008}"/>
+      </geometry>
+      <material name="panel"/>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="ladder_bucket" params="idx s_pos">
+    <xacro:property name="ladder_angle" value="${36 * pi / 180}"/>
+    <visual name="ladder_bucket_${idx}">
+      <origin xyz="${0.37 + s_pos * cos(ladder_angle) + 0.056 * sin(ladder_angle)} 0 ${-0.02 - s_pos * sin(ladder_angle) + 0.056 * cos(ladder_angle)}" rpy="0 ${ladder_angle} 0"/>
+      <geometry>
+        <box size="0.042 ${ladder_width - 0.006} 0.032"/>
+      </geometry>
+      <material name="carbon"/>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="wheel_paddle" params="idx">
+    <xacro:property name="angle" value="${idx * pi / 4}"/>
+    <visual name="paddle_${idx}">
+      <origin xyz="${(wheel_radius - 0.005) * cos(angle)} 0 ${(wheel_radius - 0.005) * sin(angle)}" rpy="0 ${-angle} 0"/>
+      <geometry>
+        <box size="0.012 ${wheel_width - 0.004} 0.010"/>
+      </geometry>
+      <material name="paddle"/>
+    </visual>
+  </xacro:macro>
+
   <link name="base_link"/>
 
   <joint name="chassis_joint" type="fixed">
@@ -46,35 +125,112 @@
   </joint>
 
   <link name="chassis">
-    <visual name="body">
+    <visual name="left_side_panel">
+      <origin xyz="0 ${chassis_width / 2 - 0.004} 0"/>
       <geometry>
-        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+        <box size="${chassis_length - 2 * edge_radius} 0.008 ${chassis_height - 2 * edge_radius}"/>
       </geometry>
       <material name="carbon"/>
     </visual>
-    <visual name="front_plate">
-      <origin xyz="${chassis_length / 2 + 0.005} 0 0"/>
+    <visual name="right_side_panel">
+      <origin xyz="0 ${-chassis_width / 2 + 0.004} 0"/>
       <geometry>
-        <box size="0.01 ${chassis_width - 0.04} 0.12"/>
+        <box size="${chassis_length - 2 * edge_radius} 0.008 ${chassis_height - 2 * edge_radius}"/>
+      </geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual name="roof_panel">
+      <origin xyz="-0.16 0 ${chassis_height / 2 - 0.004}"/>
+      <geometry>
+        <box size="0.720 ${chassis_width - 2 * edge_radius} 0.008"/>
+      </geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual name="floor_panel">
+      <origin xyz="-0.16 0 ${-chassis_height / 2 + 0.004}"/>
+      <geometry>
+        <box size="0.720 ${chassis_width - 2 * edge_radius} 0.008"/>
+      </geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual name="rear_upper_panel">
+      <origin xyz="${-chassis_length / 2 + 0.004} 0 ${(chassis_height / 2 - edge_radius) / 2}"/>
+      <geometry>
+        <box size="0.008 ${chassis_width - 2 * edge_radius} ${chassis_height / 2 - edge_radius}"/>
+      </geometry>
+      <material name="carbon"/>
+    </visual>
+    <xacro:rounded_long_edge edge_name="top_left" y_sign="1" z_sign="1"/>
+    <xacro:rounded_long_edge edge_name="top_right" y_sign="-1" z_sign="1"/>
+    <xacro:rounded_long_edge edge_name="bottom_left" y_sign="1" z_sign="-1"/>
+    <xacro:rounded_long_edge edge_name="bottom_right" y_sign="-1" z_sign="-1"/>
+    <xacro:rounded_corner_post post_name="front_left" x_sign="1" y_sign="1"/>
+    <xacro:rounded_corner_post post_name="front_right" x_sign="1" y_sign="-1"/>
+    <xacro:rounded_corner_post post_name="rear_left" x_sign="-1" y_sign="1"/>
+    <xacro:rounded_corner_post post_name="rear_right" x_sign="-1" y_sign="-1"/>
+    <xacro:rounded_cross_edge edge_name="front_top" x_sign="1" z_sign="1"/>
+    <xacro:rounded_cross_edge edge_name="front_bottom" x_sign="1" z_sign="-1"/>
+    <xacro:rounded_cross_edge edge_name="rear_top" x_sign="-1" z_sign="1"/>
+    <xacro:rounded_cross_edge edge_name="rear_bottom" x_sign="-1" z_sign="-1"/>
+    <visual name="dump_bed">
+      <origin xyz="-0.19 0 -0.14" rpy="0 ${-10.62 * pi / 180} 0"/>
+      <geometry>
+        <box size="0.640 0.324 0.110"/>
+      </geometry>
+      <material name="bed"/>
+    </visual>
+    <visual name="bucket_ladder">
+      <origin xyz="0.37 0 -0.02" rpy="0 ${36 * pi / 180} 0"/>
+      <geometry>
+        <box size="0.760 ${ladder_width} 0.085"/>
+      </geometry>
+      <material name="panel"/>
+    </visual>
+    <xacro:ladder_bucket idx="0" s_pos="-0.24"/>
+    <xacro:ladder_bucket idx="1" s_pos="-0.08"/>
+    <xacro:ladder_bucket idx="2" s_pos="0.08"/>
+    <xacro:ladder_bucket idx="3" s_pos="0.24"/>
+    <xacro:lidar_strut strut_name="fl" x_sign="1" y_sign="1"/>
+    <xacro:lidar_strut strut_name="fr" x_sign="1" y_sign="-1"/>
+    <xacro:lidar_strut strut_name="rl" x_sign="-1" y_sign="1"/>
+    <xacro:lidar_strut strut_name="rr" x_sign="-1" y_sign="-1"/>
+    <visual name="lidar_platform">
+      <origin xyz="0 0 ${chassis_height / 2 + lidar_riser_height - 0.004}"/>
+      <geometry>
+        <box size="0.130 0.130 0.008"/>
+      </geometry>
+      <material name="panel"/>
+    </visual>
+    <visual name="front_plate">
+      <origin xyz="${chassis_length / 2 + 0.002} 0 ${chassis_height / 2 - edge_radius}"/>
+      <geometry>
+        <box size="0.006 ${chassis_width - 0.08} 0.020"/>
       </geometry>
       <material name="accent"/>
     </visual>
-    <collision>
+    <collision name="body">
       <geometry>
         <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
       </geometry>
     </collision>
+    <collision name="ladder">
+      <origin xyz="${chassis_length / 2 + ladder_overhang / 2} 0 -0.06"/>
+      <geometry>
+        <box size="${ladder_overhang} ${ladder_width} 0.360"/>
+      </geometry>
+    </collision>
     <inertial>
+      <origin xyz="0 0 -0.08"/>
       <mass value="${chassis_mass}"/>
       <xacro:box_inertia mass="${chassis_mass}" x="${chassis_length}" y="${chassis_width}" z="${chassis_height}"/>
     </inertial>
   </link>
 
-    <xacro:macro name="wheel" params="name x y">
+  <xacro:macro name="wheel" params="name x_pos y">
     <joint name="${name}_wheel_joint" type="continuous">
       <parent link="base_link"/>
       <child link="${name}_wheel"/>
-      <origin xyz="${x * wheelbase / 2} ${y * track / 2} ${wheel_radius}"/>
+      <origin xyz="${x_pos} ${y * track / 2} ${wheel_radius}"/>
       <axis xyz="0 1 0"/>
     </joint>
 
@@ -82,21 +238,29 @@
       <visual name="tyre">
         <origin rpy="${pi / 2} 0 0"/>
         <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+          <cylinder radius="${wheel_radius - 0.005}" length="${wheel_width}"/>
         </geometry>
         <material name="tyre"/>
       </visual>
+      <xacro:wheel_paddle idx="0"/>
+      <xacro:wheel_paddle idx="1"/>
+      <xacro:wheel_paddle idx="2"/>
+      <xacro:wheel_paddle idx="3"/>
+      <xacro:wheel_paddle idx="4"/>
+      <xacro:wheel_paddle idx="5"/>
+      <xacro:wheel_paddle idx="6"/>
+      <xacro:wheel_paddle idx="7"/>
       <visual name="hub">
-        <origin xyz="0 ${y * (wheel_width / 2 + 0.005)} 0" rpy="${pi / 2} 0 0"/>
+        <origin xyz="0 ${y * (wheel_width / 2 + 0.004)} 0" rpy="${pi / 2} 0 0"/>
         <geometry>
-          <cylinder radius="0.09" length="0.01"/>
+          <cylinder radius="0.09" length="0.008"/>
         </geometry>
         <material name="hub"/>
       </visual>
       <visual name="spoke">
-        <origin xyz="0 ${y * (wheel_width / 2 + 0.011)} 0"/>
+        <origin xyz="0 ${y * (wheel_width / 2 + 0.009)} 0"/>
         <geometry>
-          <box size="0.17 0.012 0.03"/>
+          <box size="0.17 0.010 0.026"/>
         </geometry>
         <material name="accent"/>
       </visual>
@@ -115,10 +279,12 @@
     </link>
   </xacro:macro>
 
-  <xacro:wheel name="front_left" x="1" y="1"/>
-  <xacro:wheel name="front_right" x="1" y="-1"/>
-  <xacro:wheel name="rear_left" x="-1" y="1"/>
-  <xacro:wheel name="rear_right" x="-1" y="-1"/>
+  <xacro:wheel name="front_left" x_pos="${front_axle_x}" y="1"/>
+  <xacro:wheel name="front_right" x_pos="${front_axle_x}" y="-1"/>
+  <xacro:wheel name="middle_left" x_pos="0.0" y="1"/>
+  <xacro:wheel name="middle_right" x_pos="0.0" y="-1"/>
+  <xacro:wheel name="rear_left" x_pos="${rear_axle_x}" y="1"/>
+  <xacro:wheel name="rear_right" x_pos="${rear_axle_x}" y="-1"/>
 
   <xacro:include filename="sensors/oak_d_pro.xacro"/>
 
@@ -128,19 +294,19 @@
   <!-- Front and rear OAK-D Pro cameras -->
   <xacro:oak_d_pro prefix="oak_front" parent="chassis" pitch="${camera_pitch}"
                    sim_cameras="$(arg sim_cameras)">
-    <origin xyz="${chassis_length / 2 + 0.01 + 0.023 / 2} 0 0.05" rpy="0 0 0"/>
+    <origin xyz="${chassis_length / 2 + 0.01 + 0.023 / 2} 0 ${chassis_height / 2 - rail_size / 2}" rpy="0 0 0"/>
   </xacro:oak_d_pro>
 
   <xacro:oak_d_pro prefix="oak_rear" parent="chassis" pitch="${camera_pitch}"
                    sim_cameras="$(arg sim_cameras)">
-    <origin xyz="${-chassis_length / 2 - 0.01 - 0.023 / 2} 0 0.05" rpy="0 0 ${pi}"/>
+    <origin xyz="${-chassis_length / 2 - 0.01 - 0.023 / 2} 0 ${chassis_height / 2 - rail_size / 2}" rpy="0 0 ${pi}"/>
   </xacro:oak_d_pro>
 
   <xacro:include filename="sensors/ouster_os1.xacro"/>
 
-  <!-- Ouster OS1-128 LiDAR mounted on front-top chassis -->
-  <xacro:ouster_os1 prefix="os_sensor" parent="chassis">
-    <origin xyz="0.20 0 ${chassis_height / 2}" rpy="0 0 0"/>
+  <!-- Ouster OS1-128 LiDAR mounted on raised central platform -->
+  <xacro:ouster_os1 prefix="os_sensor" parent="chassis" sim_lidar="$(arg sim_lidar)">
+    <origin xyz="0 0 ${chassis_height / 2 + lidar_riser_height}" rpy="0 0 0"/>
   </xacro:ouster_os1>
 
   <xacro:include filename="innex_1.gazebo.xacro"/>

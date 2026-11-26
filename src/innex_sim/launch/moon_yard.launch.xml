@@ -6,6 +6,9 @@
   <arg name="video"
        default="false"
        description="Start simulated camera encoders and Foxglove bridge." />
+  <arg name="lidar"
+       default="true"
+       description="Start the simulated Ouster LiDAR sensor." />
   <arg name="x"
        default="1.0"
        description="Rover spawn x in the arena frame, in metres." />
@@ -35,6 +38,7 @@
   <include file="$(find-pkg-share innex_description)/launch/description.launch.xml">
     <arg name="use_sim_time" value="true" />
     <arg name="sim_cameras" value="$(var video)" />
+    <arg name="sim_lidar" value="$(var lidar)" />
   </include>
 
   <node pkg="ros_gz_sim" exec="create" output="screen">
