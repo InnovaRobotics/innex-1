@@ -12,7 +12,6 @@
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>innex_description</exec_depend>
-  <exec_depend>ament_index_python</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
@@ -20,9 +19,12 @@
   <exec_depend>innex_video</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>launch_xml</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>ament_cmake_xmllint</test_depend>
   <test_depend>foxglove_msgs</test_depend>
   <test_depend>innex_video</test_depend>
   <test_depend>nav_msgs</test_depend>

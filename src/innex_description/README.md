@@ -17,7 +17,7 @@ The dimensions come from the June 2026 CAD. Measurements of the real rover repla
 [Build and source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation), then run each command in its own terminal.
 
 ```bash
-ros2 launch innex_description description.launch.py
+ros2 launch innex_description description.launch.xml
 ros2 run joint_state_publisher joint_state_publisher
 ros2 run foxglove_bridge foxglove_bridge
 ```

@@ -13,8 +13,8 @@ The world uses the `gz-sim-physics-system`, sensors (ogre2) and IMU systems. The
 [Build and source the workspace](../../ONBOARDING.md#build-the-workspace-and-run-the-simulation), then run one of these commands.
 
 ```bash
-ros2 launch innex_sim moon_yard.launch.py
-ros2 launch innex_sim moon_yard.launch.py gui:=false
+ros2 launch innex_sim moon_yard.launch.xml
+ros2 launch innex_sim moon_yard.launch.xml gui:=false
 ```
 
 Video is disabled by default. Pass `video:=true` to add the Gazebo camera sensors, bridge their images, start the front and rear H.264 encoders, and launch Foxglove Bridge. The output topics are `/oak_front/video` and `/oak_rear/video`; Foxglove Bridge listens on port `8765`.
@@ -30,7 +30,7 @@ To run the world without ROS, [source the workspace](../../ONBOARDING.md#build-t
 The rover spawns at the centre of the start zone, facing east. Set the spawn pose with the `x`, `y` and `yaw` launch arguments. The values are in the arena frame, in metres and radians.
 
 ```bash
-ros2 launch innex_sim moon_yard.launch.py x:=1.5 y:=3.0 yaw:=0.5
+ros2 launch innex_sim moon_yard.launch.xml x:=1.5 y:=3.0 yaw:=0.5
 ```
 
 The Gazebo `DiffDrive` system drives all four wheels as a skid steer. It limits the rover to 0.4 m/s and 0.8 rad/s. The limiter acts on changes in velocity, so speeding up forwards and slowing down in reverse are limited to 0.3 m/s², and slowing down forwards and speeding up in reverse to 0.5 m/s². Turning is limited to 0.6 rad/s². These are starting values until a wheel test on blocks measures the real rover.
@@ -111,7 +111,7 @@ These terminals have no display. Someone must be logged in to the VM desktop fir
 ```bash
 export DISPLAY=:0
 export XAUTHORITY=$(ls /run/user/1000/.mutter-Xwaylandauth.* | head -1)
-ros2 launch innex_sim moon_yard.launch.py
+ros2 launch innex_sim moon_yard.launch.xml
 ```
 
 You can also run the launch from a terminal on the VM desktop.

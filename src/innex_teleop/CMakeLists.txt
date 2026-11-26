@@ -9,6 +9,8 @@ install(DIRECTORY config launch
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
+  find_package(ament_cmake_xmllint REQUIRED)
+  ament_xmllint()
   ament_add_pytest_test(test_joy_teleop test/test_joy_teleop.py TIMEOUT 120)
 endif()
 

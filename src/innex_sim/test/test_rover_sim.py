@@ -114,7 +114,7 @@ def sim(tmp_path_factory):
     env['GZ_PARTITION'] = f'innex_sim_test_{os.getpid()}'
     log = (tmp_path_factory.mktemp('launch') / 'launch.log').open('w')
     process = subprocess.Popen(
-        ['ros2', 'launch', 'innex_sim', 'moon_yard.launch.py', 'gui:=false',
+        ['ros2', 'launch', 'innex_sim', 'moon_yard.launch.xml', 'gui:=false',
          'video:=true'],
         env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     try:

@@ -7,7 +7,7 @@ Drive the INNEX-1 rover from a game controller plugged into the laptop.
 Plug in the controller first. Build and source the workspace, then run this command.
 
 ```bash
-ros2 launch innex_teleop joy.launch.py
+ros2 launch innex_teleop joy.launch.xml
 ```
 
 The launch file starts two nodes:

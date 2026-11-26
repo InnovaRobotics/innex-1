@@ -9,6 +9,8 @@ install(DIRECTORY launch urdf
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
+  find_package(ament_cmake_xmllint REQUIRED)
+  ament_xmllint()
   ament_add_pytest_test(test_urdf test/test_urdf.py TIMEOUT 120)
 endif()
 
