@@ -1,54 +1,58 @@
 # System design
 
-INNEX-1 digs sand in the excavation zone, carries it to the construction zone and dumps it on the berm. A run lasts 20 minutes. The team repeats the cycle as often as it can.
+INNEX-1 digs sand in the excavation zone, carries it across an obstacle-filled arena and dumps it onto a berm in the construction zone. A run lasts up to 20 minutes, and the team ends the run when it chooses. Every part of the hardware and software exists to complete those cycles reliably, safely and with as little mass and energy as possible.
 
-## A run
+## How a run works
 
-The judges place the rover at a random position and heading in the start zone. The rover crosses the obstacle zone, digs in the excavation zone, returns, and dumps sand on the berm in the construction zone.
+Right before the timer starts, the judges place the rover at a random spot inside the start zone and spin a direction wheel so its forward arrow points north, east, south or west. From there, one cycle has four stages: cross the obstacle zone around random boulders and craters, lower the bucket ladder to collect sand in the excavation zone, cross back to the construction zone, and dump the load onto the berm target area.
 
-An operator drives the rover with a gamepad. This is teleop. For the autonomy tasks, the rover drives itself, and the operator only watches telemetry.
+In remote control (called **teleop**), an operator sits outside the arena in mission control and drives the rover with a gamepad using live video from the rover's own cameras. During autonomy attempts, the rover drives itself while the operator watches read-only telemetry without touching any controls.
 
-If commands stop arriving, the rover stops. [Teleop and rover control](system/teleop-and-control.md) explains how.
-
-[Scoring](rules.md#scoring) explains how the judges score a run.
+Whenever commands stop arriving, the rover stops itself across three independent safety layers. [Teleop and rover control](system/teleop-and-control.md) traces how commands reach the motors and how each stop layer catches a different failure. [Scoring](rules.md#scoring) breaks down how berm volume, mass, energy, cameras and autonomy add up to the competition score.
 
 ## Hardware
 
 | Part | Role | Location |
-|---|---|---|
-| Mission control laptop | Reads the gamepad and runs Foxglove, the dashboard for video and telemetry | Mission control |
-| Router | Dual-band Wi-Fi link between mission control and the rover. The choice is open. See [Comms](system/comms.md). | Open question |
-| Jetson Orin Nano Super | The rover's computer. Runs ROS 2 Jazzy on JetPack 7.2.1. See [Jetson](jetson.md). | On the rover |
-| Teensy 4.1 | Microcontroller on USB serial to the Jetson. Handles timing-sensitive input and output: motor controller signals, encoder counts, and stopping outputs when commands stop. | On the rover |
-| Four Gimson GR-WM4 worm gear motors | Skid-steer drive. Each has a Hall-effect quadrature encoder. | Wheels |
-| Two Sabertooth 2x32 motor controllers | Drive the four wheel motors. The Teensy commands them. | On the rover |
-| Bucket ladder with a StepperOnline 24 V geared brushless DC (BLDC) motor | Excavation. The ladder lowers into the sand and raises again. | Front of the rover |
-| Dump bed and door, with 24 V linear actuators on Cytron MD10C or MDD10A drivers | Deposition | On the rover |
-| Two Luxonis OAK-D Pro cameras | Front and rear. Active stereo depth, colour video, on-camera H.264 encoding, and a built-in IMU. | Front and rear |
-| Ouster OS1-128 LiDAR | 360-degree 3D point cloud and reflectivity, with a built-in IMU | On the rover |
-| Latching E-stop and energy logger | Required by the rules. See [E-stop](rules.md#e-stop). | On the rover |
-| LiPo batteries | Power | On the rover |
+| --- | --- | --- |
+| Mission control laptop | Reads the wired gamepad and runs Foxglove for live video and telemetry | Mission control |
+| GL.iNet GL-A1300 dual-band router | Connects mission control (over arena Ethernet) to the rover's Wi-Fi client; corner placement is provisional per [Organiser clarifications](rules.md#organiser-clarifications-provisional). See [Jetson](jetson.md#rover-router) and [Comms](system/comms.md). | Arena corner (provisional) |
+| Jetson Orin Nano Super | Main onboard computer running ROS 2 Jazzy on JetPack 7.2.1 in 25 W mode. See [Jetson](jetson.md). | On the rover |
+| Teensy 4.1 | Microcontroller over USB serial from the Jetson; owns timing-critical I/O, motor controller signals, encoder pulse counting and the 250 ms hardware watchdog | On the rover |
+| Six Gimson GR-WM4 worm gear motors | Six-wheel skid-steer drive, each fitted with a Hall-effect quadrature encoder | Wheels |
+| Three Sabertooth 2x32 motor controllers | Drive the six wheel motors from Teensy Packet Serial signals | On the rover |
+| Bucket ladder with a StepperOnline 24 V geared BLDC motor | Excavation; lowers into the sand, digs and raises clear | Front of the rover |
+| Dump bed and door with 24 V linear actuators | Deposition; driven via Cytron MD10C or MDD10A drivers (final controller choice open) | Rear of the rover |
+| Two Luxonis OAK-D Pro cameras | Front and rear active stereo depth, colour video, hardware H.264 encoding and built-in IMU | Front and rear |
+| Ouster OS1-128 LiDAR | 360-degree 3D point cloud, surface reflectivity and 6-axis IMU on a raised central platform | On the rover |
+| Latching E-stop and energy logger | Required by the rules to cut battery power and log total energy. See [E-stop](rules.md#e-stop). | On the rover |
+| LiPo batteries | Main drive, mechanism and compute power | On the rover |
 
 ## How the parts connect
+
+The following diagram traces the physical links from the operator's gamepad to the six wheel motors, bucket ladder and dump actuators.
 
 ```mermaid
 flowchart LR
     gamepad["Gamepad"] -->|USB| laptop["Mission control laptop"]
-    laptop <-->|Wi-Fi| router["Router"]
+    laptop <-->|Ethernet| router["GL-A1300 router (arena corner)"]
     router <-->|Wi-Fi| jetson["Jetson Orin Nano Super"]
     jetson <-->|USB serial| teensy["Teensy 4.1"]
     jetson <-->|USB| oak["Two OAK-D Pro cameras"]
     jetson <-->|Ethernet| ouster["Ouster OS1-128"]
-    teensy -->|motor signals| sabertooth["Two Sabertooth controllers"]
+    teensy -->|Packet Serial| sabertooth["Three Sabertooth 2x32 controllers"]
     teensy -->|motor signals| drivers["Actuator drivers"]
     teensy -->|motor signals| bldc["BLDC motor controller"]
     drivers --> actuators["Dump bed and door actuators"]
     bldc --> ladder["Bucket ladder motor"]
-    sabertooth --> wheels["Four wheel motors"]
+    sabertooth --> wheels["Six wheel motors"]
     wheels -->|encoder counts| teensy
 ```
 
+Look at the split between `Jetson Orin Nano Super` and `Teensy 4.1` in the centre of the diagram. The Jetson handles heavy sensor streams, autonomy and network video, while the Teensy sits directly in front of the motor controllers so a Linux freeze or ROS node crash still shuts motor outputs off in hardware within 250 ms.
+
 ## How the subsystems work together
+
+The software divides into seven subsystems that pass data in a closed loop, shown in the next diagram.
 
 ```mermaid
 flowchart LR
@@ -60,37 +64,41 @@ flowchart LR
     gamepad["Operator gamepad"] -->|velocity and mechanism commands| comms["Comms and mission control"]
     control -->|wheel and mechanism setpoints| rover["Motors and actuators"]
     comms -->|operator commands| control
-    sensors -->|video| comms
+    sensors -->|H.264 video| comms
     control -->|wheel odometry| localisation
     nav -->|telemetry| comms
 ```
 
-Sensors feed perception and localisation. Navigation and mission combine the hazards and the pose to choose where to go. Its commands reach teleop and rover control. Comms carries the gamepad's commands to the rover, and it carries video and telemetry back. Control sends wheel odometry to localisation.
+Follow the loop from left to right. [Sensors](system/sensors.md) turns the physical arena into images, point clouds and inertial readings. [Perception](system/perception.md) uses those scans to mark rocks, craters and walls, while [Localisation](system/localisation.md) combines wheel odometry, the IMU, LiDAR scans and the beacon to track where the rover sits. [Navigation and mission](system/navigation-and-mission.md) combines the pose and hazard map to choose a safe route and run dig and dump sequences. Its commands go into [Teleop and rover control](system/teleop-and-control.md), where a command selector arbitrates between autonomy and the gamepad arriving through [Comms and mission control](system/comms.md). Comms carries compressed camera video and read-only telemetry back to mission control so the operator can drive or supervise.
 
-## Subsystems
+## Subsystems and codebase status
 
-| Subsystem | What it answers |
-|---|---|
-| [Teleop and rover control](system/teleop-and-control.md) | How does a command become wheel or mechanism motion? How does the rover stop? |
-| [Comms and mission control](system/comms.md) | How does the operator see and drive the rover over the link? |
-| [Sensors](system/sensors.md) | What does each sensor measure, where does it sit, and what does it publish? |
-| [Perception](system/perception.md) | What is around the rover, and where can it not drive? |
-| [Localisation](system/localisation.md) | Where is the rover in the arena? |
-| [Navigation and mission](system/navigation-and-mission.md) | Where does the rover go next, and what does it do on arrival? |
-| [Simulation and robot model](system/simulation.md) | How do we test the other subsystems without the rover? |
+Stage 1 packages (simulation, robot model, gamepad teleop, drive bridge, Teensy watchdog core and H.264 camera streaming) live on `main` today; perception, localisation and autonomous navigation are in design for Stages 2 and 3.
+
+| Subsystem | Question it answers | Packages on `main` |
+| --- | --- | --- |
+| [Teleop and rover control](system/teleop-and-control.md) | How does a command become wheel or mechanism motion, and how does the rover stop safely? | [`innex_teleop`](../src/innex_teleop/README.md), [`innex_drive_bridge`](../src/innex_drive_bridge/README.md), [`teensy_drive`](../firmware/teensy_drive/README.md) |
+| [Comms and mission control](system/comms.md) | How does the operator see and drive the rover inside the 4,000 kbps budget? | [`innex_video`](../src/innex_video/README.md), `foxglove_bridge` |
+| [Sensors](system/sensors.md) | What does each sensor measure, where does it sit and how does it publish data? | [`innex_video`](../src/innex_video/README.md), [`innex_description`](../src/innex_description/README.md) |
+| [Perception](system/perception.md) | What obstacles, craters and walls surround the rover? | Planned (Stage 3) |
+| [Localisation](system/localisation.md) | Where is the rover in the arena, and how uncertain is that estimate? | Planned (Stage 2) |
+| [Navigation and mission](system/navigation-and-mission.md) | Where does the rover go next, and what does it do when it arrives? | Planned (Stages 2 and 3) |
+| [Simulation and robot model](system/simulation.md) | How do you test the other subsystems without the physical rover? | [`innex_sim`](../src/innex_sim/README.md), [`innex_description`](../src/innex_description/README.md) |
 
 ## Rules that shape the design
 
-- The rover cannot use the arena walls for mapping, navigation or collision avoidance. You must prove it to the judges. See [Navigation and sensing](rules.md#navigation-and-sensing).
-- GPS and compasses are not allowed. Use only the gyroscope and accelerometer of the IMU. See [Not allowed](rules.md#not-allowed).
-- The link must average 4,000 kbps or less. See [Communications](rules.md#communications).
-- Each arena camera you use costs points. See [Scoring](rules.md#scoring).
-- During a hands-free attempt, you cannot send commands, orientation data or obstacle locations to the rover. See [Hands-free rules](rules.md#hands-free-rules).
-- One push of the E-stop disconnects the batteries from all controllers. See [E-stop](rules.md#e-stop).
-- Two scores divide berm volume per minute. One divides by the rover's mass, and the other divides by the energy it uses. A light, efficient rover scores higher. See [Scoring](rules.md#scoring).
+Seven competition constraints drive choices across every subsystem:
+
+- No hard-coded arena dimensions, and provisional wall sensing: the 2027 draft rulebook forbids using arena walls, while the organisers' 4 November email states that mapping the walls live as obstacles for autonomy and navigation is expected to be allowed in the final rulebook as long as you do not hard-code arena dimensions. See [Navigation and sensing](rules.md#navigation-and-sensing) and [Organiser clarifications](rules.md#organiser-clarifications-provisional).
+- No GPS and no compasses: software can read gyroscope and accelerometer data only, and any magnetometer must be switched off or ignored. See [Not allowed](rules.md#not-allowed).
+- 4,000 kbps average link cap: raw LiDAR point clouds stay onboard the Jetson, and cameras compress operator video to H.264 in hardware. See [Communications](rules.md#communications).
+- Onboard cameras earn points: using neither arena camera scores 120 points, so front and rear OAK-D Pro feeds give the operator full visibility. See [Scoring](rules.md#scoring).
+- Strict hands-free autonomy: during an autonomous attempt, nobody in mission control touches controls or sends orientation data or obstacle positions to the rover. See [Hands-free rules](rules.md#hands-free-rules).
+- Hardware E-stop isolation: one push disconnects batteries from all controllers and active subsystems, and resetting the button must never restart motion on its own. See [E-stop](rules.md#e-stop).
+- Mass, energy and time sit in the scoring denominator: berm scores divide volume per minute by rover mass and by total energy, favouring light hardware, low compute power and fast cycles. See [Scoring](rules.md#scoring).
 
 ## Frames
 
-A frame is a coordinate system attached to something. The repo uses the names in [REP 103](https://www.ros.org/reps/rep-0103.html) and [REP 105](https://www.ros.org/reps/rep-0105.html): `map`, `odom` and `base_link`. `base_link` sits on the ground midway between the wheels, with x forward, y left and z up. The [innex_description README](../src/innex_description/README.md#frames) gives the details.
+A **frame** is a 3D coordinate system attached to a physical object or place. Every distance, obstacle point or velocity only makes sense once you know which frame it is measured in. INNEX-1 follows [REP 103](https://www.ros.org/reps/rep-0103.html) (metres, radians, x forward, y left, z up) and [REP 105](https://www.ros.org/reps/rep-0105.html) (`map`, `odom` and `base_link`).
 
-The arena frame has its origin at the south-west inside corner of the arena. The [innex_sim README](../src/innex_sim/README.md#arena-frame) defines it and lists the zone positions.
+`base_link` sits on the ground directly beneath the middle axle and moves with the rover; [`innex_description`](../src/innex_description/README.md#frames) defines its six-wheel geometry (`58.5 kg` empty mass from the November 2026 INNEX-2 CAD) and sensor offsets. The arena frame (`map`) has its origin at the south-west interior corner of the pit at sand level; [`innex_sim`](../src/innex_sim/README.md#arena-frame) defines the zone coordinates used for simulation tests. [Localisation](system/localisation.md) explains why ROS 2 inserts `odom` between `map` and `base_link`.
