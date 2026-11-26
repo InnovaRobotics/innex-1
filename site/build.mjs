@@ -410,6 +410,12 @@ function parseTableRow(line) {
     .map((c) => c.trim());
 }
 
+function renderCodeBlock(content) {
+  return `<div class="code-wrap"><button type="button" class="copy-btn" aria-label="Copy code"><svg class="icon-copy" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 5.5V3.7c0-.7-.5-1.2-1.2-1.2H3.7c-.7 0-1.2.5-1.2 1.2v5.6c0 .7.5 1.2 1.2 1.2h1.8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><svg class="icon-check" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.4L6.5 11.7L12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><pre><code>${escapeHtml(
+    content
+  )}</code></pre></div>`;
+}
+
 function parseListBlock(lines, startIdx, ordered, currentPage, pageMap, glossaryCtx) {
   const itemMarkerRe = ordered ? /^\s*\d+\.\s+(.*)$/ : /^\s*-\s+(.*)$/;
   const items = [];
@@ -441,7 +447,7 @@ function parseListBlock(lines, startIdx, ordered, currentPage, pageMap, glossary
           i++;
         }
         i++;
-        itemParts.push(`<pre><code>${escapeHtml(block.join("\n"))}</code></pre>`);
+        itemParts.push(renderCodeBlock(block.join("\n")));
         continue;
       }
 
@@ -572,7 +578,7 @@ function parseMarkdown(md, currentPage, pageMap, glossaryCatalogue) {
       ) {
         htmlParts.push(renderOusterMathBlock());
       } else {
-        htmlParts.push(`<pre><code>${escapeHtml(content)}</code></pre>`);
+        htmlParts.push(renderCodeBlock(content));
       }
       continue;
     }
@@ -944,8 +950,231 @@ function writeGlossaryClientScript(entries) {
   fs.writeFileSync(path.join(DIST_DIR, "glossary-card.js"), script, "utf8");
 }
 
+function buildSearchIndex(flatOrder) {
+  const entries = [];
+  for (const page of flatOrder) {
+    const cleaned = page.md.replace(/<!--[\s\S]*?-->/g, "").replace(/\r\n/g, "\n");
+    const chunks = cleaned.split(/^(?=#{1,3}\s+)/m);
+    for (const chunk of chunks) {
+      const hm = chunk.match(/^(#{1,3})\s+(.+)$/m);
+      if (!hm) continue;
+      const depth = hm[1].length;
+      const secTitle = hm[2].replace(/`([^`]+)`/g, "$1").trim();
+      const id = depth === 1 ? "" : slugify(secTitle);
+      const bodyText = chunk
+        .slice(hm[0].length)
+        .replace(/```[\s\S]*?```/g, (b) => b.replace(/```\w*/g, " "))
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/[*`|#>]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!bodyText && depth === 1) continue;
+      entries.push({
+        page: page.label,
+        sec: depth === 1 ? page.label : secTitle,
+        group: page.groupTitle,
+        url: id ? `${page.outRel}#${id}` : page.outRel,
+        text: bodyText.slice(0, 420),
+      });
+    }
+  }
+  return entries;
+}
+
+function writeSearchAndCopyScript(searchEntries) {
+  const script = `(() => {
+  // 1. Copy button on code blocks
+  for (const btn of document.querySelectorAll(".copy-btn")) {
+    let timer = 0;
+    btn.addEventListener("click", async () => {
+      const code = btn.parentElement?.querySelector("pre code")?.textContent ?? "";
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.setAttribute("data-copied", "true");
+        btn.setAttribute("aria-label", "Copied");
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          btn.removeAttribute("data-copied");
+          btn.setAttribute("aria-label", "Copy code");
+        }, 1600);
+      } catch {}
+    });
+  }
+
+  // 2. Instant Cmd+K / "/" documentation search
+  const INDEX = ${JSON.stringify(searchEntries)};
+  const rootPrefix = document.documentElement.dataset.root || "./";
+  const dialog = document.getElementById("search-dialog");
+  const input = document.getElementById("search-input");
+  const list = document.getElementById("search-results");
+  const status = document.getElementById("search-status");
+  const openBtn = document.getElementById("search-open");
+  const escBtn = document.getElementById("search-esc");
+  if (!dialog || !input || !list) return;
+
+  let activeIdx = 0;
+  let currentMatches = [];
+  let lastTrigger = null;
+
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function highlight(str, terms) {
+    let out = esc(str);
+    for (const t of terms) {
+      if (t.length < 2) continue;
+      const re = new RegExp(\`(\${t.replace(/[.*+?^$\${}()|[\\]\\\\]/g, "\\\\$&")})\`, "ig");
+      out = out.replace(re, "<mark>$1</mark>");
+    }
+    return out;
+  }
+
+  function resolveUrl(relUrl) {
+    return rootPrefix === "./" ? \`./\${relUrl}\` : \`\${rootPrefix}/\${relUrl}\`;
+  }
+
+  function renderResults(query) {
+    const q = query.trim().toLowerCase();
+    const terms = q ? q.split(/\\s+/).filter(Boolean) : [];
+
+    if (!terms.length) {
+      currentMatches = INDEX.slice(0, 10);
+    } else {
+      const scored = [];
+      for (const item of INDEX) {
+        const hayTitle = \`\${item.page} \${item.sec}\`.toLowerCase();
+        const hayBody = item.text.toLowerCase();
+        let score = 0;
+        let allMatch = true;
+        for (const t of terms) {
+          const inT = hayTitle.includes(t);
+          const inB = hayBody.includes(t);
+          if (!inT && !inB) {
+            allMatch = false;
+            break;
+          }
+          if (inT) score += 10;
+          if (inB) score += 2;
+        }
+        if (allMatch) scored.push({ item, score });
+      }
+      scored.sort((a, b) => b.score - a.score);
+      currentMatches = scored.slice(0, 14).map((s) => s.item);
+    }
+
+    activeIdx = 0;
+    if (!currentMatches.length) {
+      list.innerHTML = '<li class="search-empty">No matching sections found.</li>';
+      if (status) status.textContent = "0 results";
+      return;
+    }
+
+    list.innerHTML = currentMatches
+      .map((m, idx) => {
+        const label = m.page === m.sec ? m.page : \`\${m.page} › \${m.sec}\`;
+        let snippet = m.text;
+        if (terms.length) {
+          const pos = m.text.toLowerCase().indexOf(terms[0]);
+          if (pos > 48) snippet = "…" + m.text.slice(pos - 28);
+        }
+        return \`<li class="search-item" id="sr-\${idx}" role="option" aria-selected="\${idx === 0 ? "true" : "false"}">
+          <a href="\${resolveUrl(m.url)}">
+            <span class="search-item-top">
+              <span class="search-item-title">\${highlight(label, terms)}</span>
+              <span class="search-item-group">\${esc(m.group)}</span>
+            </span>
+            <span class="search-item-snippet">\${highlight(snippet.slice(0, 140), terms)}</span>
+          </a>
+        </li>\`;
+      })
+      .join("");
+    input.setAttribute("aria-activedescendant", "sr-0");
+    if (status) status.textContent = \`\${currentMatches.length} results\`;
+  }
+
+  function setSelection(nextIdx) {
+    const items = [...list.querySelectorAll(".search-item")];
+    if (!items.length) return;
+    activeIdx = (nextIdx + items.length) % items.length;
+    items.forEach((el, idx) => {
+      el.setAttribute("aria-selected", idx === activeIdx ? "true" : "false");
+    });
+    input.setAttribute("aria-activedescendant", \`sr-\${activeIdx}\`);
+    items[activeIdx].scrollIntoView({ block: "nearest" });
+  }
+
+  function openSearch() {
+    if (dialog.open) return;
+    lastTrigger = document.activeElement;
+    dialog.showModal();
+    renderResults(input.value);
+    input.focus();
+    input.select();
+  }
+
+  function closeSearch() {
+    if (!dialog.open) return;
+    dialog.close();
+    if (lastTrigger && typeof lastTrigger.focus === "function") {
+      lastTrigger.focus();
+    }
+  }
+
+  openBtn?.addEventListener("click", openSearch);
+  escBtn?.addEventListener("click", closeSearch);
+  input.addEventListener("input", () => renderResults(input.value));
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelection(activeIdx + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelection(activeIdx - 1);
+    } else if (e.key === "Enter") {
+      const link = list.querySelectorAll(".search-item a")[activeIdx];
+      if (link) {
+        e.preventDefault();
+        const href = link.getAttribute("href");
+        closeSearch();
+        window.location.href = href;
+      }
+    }
+  });
+
+  list.addEventListener("click", (e) => {
+    if (e.target.closest("a")) closeSearch();
+  });
+
+  dialog.addEventListener("click", (e) => {
+    if (e.target === dialog) closeSearch();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      dialog.open ? closeSearch() : openSearch();
+      return;
+    }
+    if (
+      e.key === "/" &&
+      !dialog.open &&
+      !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName || "") &&
+      !document.activeElement?.isContentEditable
+    ) {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+})();
+`;
+  fs.writeFileSync(path.join(DIST_DIR, "search-ui.js"), script, "utf8");
+}
+
 function copyStaticAssets() {
   fs.mkdirSync(DIST_DIR, { recursive: true });
+  fs.writeFileSync(path.join(DIST_DIR, ".nojekyll"), "", "utf8");
   fs.copyFileSync(path.join(__dirname, "styles.css"), path.join(DIST_DIR, "styles.css"));
   const distFonts = path.join(DIST_DIR, "fonts");
   fs.mkdirSync(distFonts, { recursive: true });
@@ -961,14 +1190,18 @@ function buildAllPages() {
   const glossaryCatalogue = parseGlossaryCatalogue();
   writeGlossaryClientScript(glossaryCatalogue.entries);
   const { groups, pageMap, flatOrder } = discoverDocs();
+  writeSearchAndCopyScript(buildSearchIndex(flatOrder));
 
   flatOrder.forEach((page, idx) => {
     const { bodyHtml, tocSections } = parseMarkdown(page.md, page, pageMap, glossaryCatalogue);
     const sidebarHtml = renderSidebar(groups, page);
     const tocHtml = renderToc(tocSections, page.label);
 
+    const outDir = path.posix.dirname(page.outRel);
+    const rootPrefix = outDir === "." ? "." : path.posix.relative(outDir, "");
     const cssHref = relativeHref(page.outRel, "styles.css");
     const glossaryScriptHref = relativeHref(page.outRel, "glossary-card.js");
+    const searchScriptHref = relativeHref(page.outRel, "search-ui.js");
     const homeHref = relativeHref(page.outRel, "index.html");
     const rulesHref = relativeHref(page.outRel, "docs/rules.html");
     const glossaryHref = relativeHref(page.outRel, "docs/glossary.html");
@@ -997,7 +1230,7 @@ function buildAllPages() {
       </nav>`;
 
     const html = `<!doctype html>
-<html lang="en-GB">
+<html lang="en-GB" data-root="${rootPrefix}">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
@@ -1013,11 +1246,27 @@ function buildAllPages() {
       <span class="brand-sub">InnovaRobotics · UK Lunabotics 2027</span>
     </a>
     <nav class="topbar-links" aria-label="Project links">
+      <button type="button" class="search-trigger" id="search-open" aria-label="Search documentation (Command K)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.8" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="10.4" y1="10.4" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Search</span>
+        <kbd class="search-kbd">⌘K</kbd>
+      </button>
       <a class="topbar-link" href="${rulesHref}">Rules</a>
       <a class="topbar-link" href="${glossaryHref}">Glossary</a>
       <a class="topbar-link" href="https://github.com/InnovaRobotics/innex-1">GitHub</a>
     </nav>
   </header>
+
+  <dialog class="search-dialog" id="search-dialog" aria-label="Search documentation">
+    <div class="search-header">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.8" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="10.4" y1="10.4" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <label for="search-input" class="sr-only">Search documentation</label>
+      <input id="search-input" class="search-input" type="search" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="search-results" placeholder="Search pages, ROS topics, commands…"/>
+      <button type="button" class="search-esc" id="search-esc" aria-label="Close search">Esc</button>
+    </div>
+    <div id="search-status" class="sr-only" role="status"></div>
+    <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+  </dialog>
 
   <details class="mobile-nav">
     <summary>
@@ -1047,6 +1296,7 @@ function buildAllPages() {
   </div>
 
   <script src="${glossaryScriptHref}" defer></script>
+  <script src="${searchScriptHref}" defer></script>
   <script>
     (() => {
       const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
