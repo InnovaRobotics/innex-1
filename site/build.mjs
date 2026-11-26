@@ -197,8 +197,8 @@ function parseGlossaryCatalogue() {
     }
 
     for (const phrase of candidatePhrases) {
-      // Skip overly generic common words unless capitalised or domain-specific
-      if (/^(action|actions|node|nodes|message|topic|frame|bridge)$/i.test(phrase)) {
+      // Skip ambiguous bare nouns (both singular and plural) so "serial frames" or "commit messages" never false-match
+      if (/^(actions?|nodes?|messages?|topics?|frames?|bridges?)$/i.test(phrase)) {
         continue;
       }
       const isCaseSensitive = /^[A-Z0-9\s-]{2,8}$/.test(phrase) || phrase === "LiDAR";
