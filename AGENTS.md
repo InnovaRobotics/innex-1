@@ -3,7 +3,7 @@
 ## Before you change anything
 
 1. Read the official documentation for the exact version you use. Cite it.
-2. If the documentation does not answer the question, search upstream issues and forums.
+2. If the documentation does not answer the question, search upstream issues and forums with Exa (`web_search_exa` and `web_fetch_exa`).
 3. State what you confirmed and what you could not confirm.
 4. State what done means for the task before you start.
 5. Done includes a build and the relevant tests.
@@ -15,6 +15,13 @@
 - Jetson: JetPack 7.2.1, Jetson Linux R39.2.1.
 
 Do not use answers written for Humble, Fortress or JetPack 6.
+
+## Engineering and communication
+
+- Use the repo skills in `.agents/skills/` (`ros2-engineering-skills`, `walkthrough`, `teaching-prose`, and `technical-docs`).
+- Keep changes minimal and direct. Prefer deleting wrappers and using built-in ROS 2 primitives over adding custom glue code.
+- Write standard node launch files in XML (`*.launch.xml`) with `ament_xmllint` checks rather than Python unless a launch genuinely requires the Python API.
+- For multi-file changes, build and test commit by commit and walk through code one file at a time in plain, connected British English prose instead of walls of bullet points.
 
 ## Jetson
 

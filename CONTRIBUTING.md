@@ -40,7 +40,9 @@ Two guides explain the reasoning: Chris Beams' [How to write a Git commit messag
 
 You can use AI tools. You decide how you use them.
 
-You are responsible for every line you submit. You must be able to explain what your code does and why it works. If you write tests, you must be able to explain what they check. Reviewers can ask about any line.
+This repository ships shared agent rules in [AGENTS.md](AGENTS.md) and auto-discovered skills in `.agents/skills/` (`ros2-engineering-skills`, `walkthrough`, `teaching-prose` and `technical-docs`), which Devin, Claude Code, Codex, Cursor and Copilot load automatically when you open the repo.
+
+You are responsible for every line you submit. You must be able to explain what your code does and why it works. Before you open a pull request on AI-written code, ask your agent to walk through the files with you one at a time so you can explain every line and test in review.
 
 ## Research tools
 
@@ -55,4 +57,4 @@ Name the version in every question. For example: Jazzy, Harmonic or JetPack 7.2.
 
 ## Style
 
-We write docs to the [Google developer documentation style guide](https://developers.google.com/style), with British spelling. The pull request rules follow the [ROS 2 Jazzy developer guide](https://docs.ros.org/en/jazzy/The-ROS2-Project/Contributing/Developer-Guide.html).
+We write docs to the [Google developer documentation style guide](https://developers.google.com/style), with British spelling. Standard package launch files use XML (`*.launch.xml`) validated with `ament_xmllint`. The pull request rules follow the [ROS 2 Jazzy developer guide](https://docs.ros.org/en/jazzy/The-ROS2-Project/Contributing/Developer-Guide.html).
