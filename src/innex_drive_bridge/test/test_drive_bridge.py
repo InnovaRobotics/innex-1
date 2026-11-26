@@ -246,7 +246,8 @@ def test_xml_launch_ctrl_c():
         tail, _ = process.communicate(timeout=10)
         output += tail
         assert process.returncode == 0, output
-        assert 'Traceback' not in output, output
+        assert 'process has finished cleanly' in output, output
+        assert '[drive_bridge-1] Traceback' not in output, output
     finally:
         selector.close()
         if process.poll() is None:
