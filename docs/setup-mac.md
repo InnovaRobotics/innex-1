@@ -89,7 +89,7 @@ Continue with [Install ROS 2 on Ubuntu](setup-ubuntu.md) in the VM. Then come ba
 
 1. Install Foxglove on your Mac:
    ```bash
-   brew install --cask foxglove-studio
+   brew install --cask foxglove
    ```
    Or download it from [foxglove.dev/download](https://foxglove.dev/download).
 2. In the VM, start the bridge and the talker. Follow steps 1 and 2 in [Test the Foxglove bridge](setup-ubuntu.md#test-the-foxglove-bridge).

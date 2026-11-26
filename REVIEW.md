@@ -39,7 +39,7 @@ Use these definitions exactly:
 
 ### Competition rules
 
-7. Do not use the arena walls for mapping, localisation, navigation or collision avoidance.
+7. Do not hard-code the arena's dimensions into autonomy, localisation or navigation code. Under the provisional 4 November 2026 organiser clarification in `docs/rules.md`, sensing and mapping the arena walls live as obstacles is expected to be allowed; keep wall handling isolated so it can be toggled until the final 2027 rulebook confirms it.
 8. Do not use compass data. The OAK-D's IMU has a magnetometer. Use only its gyro and accelerometer data, or its game rotation vector.
 9. Do not send raw images or point clouds to mission control. The link must average 4,000 kbps or less.
 10. Do not send commands or orientation data to the rover during a hands-free autonomy attempt.
@@ -63,7 +63,7 @@ Use these definitions exactly:
 
 ## How to write each finding
 
-Write for a first-year student who can program but is new to robotics. The author should learn something from each comment.
+Write for a first-year student who can program and is new to robotics, so the author learns why the rule exists from each comment.
 
 Use this order:
 

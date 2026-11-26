@@ -77,7 +77,7 @@ Host innex-1-lan
 
 - Do not make scripts or launch files depend on Tailscale. The competition has no internet, so Tailscale is offline there.
 - The rover router has no internet. When the Jetson is on the router's Wi-Fi, Tailscale shows it as offline. This is normal. Use `innex-1-usb` or `innex-1-lan`.
-- The Jetson connects to the saved Wi-Fi network with the highest priority that is in range. The rover router has priority 10. Glide_Resident and eduroam have priority 0, as fallbacks.
+- The Jetson connects to the saved Wi-Fi network with the highest priority that is in range. The rover router has priority 10. Other saved networks have priority 0, as fallbacks.
 - To add a network, run `sudo nmtui` on the Jetson.
 - Wi-Fi power saving is off.
 - The `wifi-reconnect.timer` service checks the Wi-Fi every minute. If the Wi-Fi has disconnected, the service connects to a saved network.
