@@ -159,3 +159,12 @@ def test_oak_d_pro_sensors_can_be_disabled():
     robot = ET.fromstring(urdf)
 
     assert not robot.findall('gazebo/sensor[@type="camera"]')
+
+
+def test_ouster_lidar_sensor_can_be_disabled():
+    urdf = xacro.process_file(
+        str(URDF_XACRO), mappings={'sim_lidar': 'false'}).toxml()
+    robot = ET.fromstring(urdf)
+
+    assert 'os_sensor' in {link.get('name') for link in robot.findall('link')}
+    assert not robot.findall('gazebo/sensor[@type="gpu_lidar"]')

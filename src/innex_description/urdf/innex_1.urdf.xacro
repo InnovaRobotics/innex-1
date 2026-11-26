@@ -2,6 +2,7 @@
 <robot name="innex_1" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
   <xacro:arg name="sim_cameras" default="true"/>
+  <xacro:arg name="sim_lidar" default="true"/>
 
   <!-- Will replace with proper values when rover is measured -->
   <xacro:property name="chassis_length" value="1.060"/>
@@ -304,7 +305,7 @@
   <xacro:include filename="sensors/ouster_os1.xacro"/>
 
   <!-- Ouster OS1-128 LiDAR mounted on raised central platform -->
-  <xacro:ouster_os1 prefix="os_sensor" parent="chassis">
+  <xacro:ouster_os1 prefix="os_sensor" parent="chassis" sim_lidar="$(arg sim_lidar)">
     <origin xyz="0 0 ${chassis_height / 2 + lidar_riser_height}" rpy="0 0 0"/>
   </xacro:ouster_os1>
 

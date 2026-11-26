@@ -17,7 +17,7 @@ ros2 launch innex_sim moon_yard.launch.xml
 ros2 launch innex_sim moon_yard.launch.xml gui:=false
 ```
 
-Video is disabled by default. Pass `video:=true` to add the Gazebo camera sensors, bridge their images, start the front and rear H.264 encoders, and launch Foxglove Bridge. The output topics are `/oak_front/video` and `/oak_rear/video`; Foxglove Bridge listens on port `8765`.
+Video is disabled by default. Pass `video:=true` to add the Gazebo camera sensors, bridge their images, start the front and rear H.264 encoders, and launch Foxglove Bridge. The output topics are `/oak_front/video` and `/oak_rear/video`; Foxglove Bridge listens on port `8765`. Pass `lidar:=false` to omit the simulated Ouster `gpu_lidar` raycaster (while keeping the `os_sensor` frame) when testing teleop or video without a GPU.
 
 The image relay uses PyAV; install Ubuntu's `python3-av` package if it is not already available.
 
