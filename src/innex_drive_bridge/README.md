@@ -35,11 +35,11 @@ The defaults live in `config/drive_bridge.yaml`. All parameters are read-only on
 | `dry_run` | `true` | Run without opening a serial port |
 | `serial_port` | `""` | Path to the Teensy serial device, such as `/dev/serial/by-id/...` |
 | `send_rate_hz` | `50.0` | Rate at which 18-byte frames are sent to the Teensy, in Hz (20 to 100) |
-| `wheel_radius_m` | `0.154` | Wheel radius in metres (CAD estimate until measured on the rover) |
-| `track_width_m` | `0.614` | Distance between left and right wheel centres in metres (CAD estimate) |
+| `wheel_radius_m` | `0.153` | Wheel radius in metres (CAD estimate until measured on the rover) |
+| `track_width_m` | `0.675` | Distance between left and right wheel centres in metres (CAD estimate) |
 | `command_frame` | `base_link` | Required `header.frame_id` on incoming `/cmd_vel` messages |
 
-The wheel speed cap (`LIMIT_MRAD_S = 1000`, or `1.0` rad/s, which is `0.154` m/s straight ahead at a `0.154` m wheel radius) is defined in `innex_drive_bridge/protocol.py` and checked by test against `kPrototypeLimitMrad` in `DriveCore.h`. When both wheels exceed the cap during a turn, `wheel_targets` scales both sides together so the turning radius stays constant.
+The wheel speed cap (`LIMIT_MRAD_S = 1000`, or `1.0` rad/s, which is `0.153` m/s straight ahead at a `0.153` m wheel radius) is defined in `innex_drive_bridge/protocol.py` and checked by test against `kPrototypeLimitMrad` in `DriveCore.h`. When both wheels exceed the cap during a turn, `wheel_targets` scales both sides together so the turning radius stays constant.
 
 ## Topics and stopping
 

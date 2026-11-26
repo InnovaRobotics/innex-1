@@ -12,8 +12,8 @@ MAX_WHEEL_RAD_S = LIMIT_MRAD_S / 1000.0
 def wheel_targets(
     linear_x: float,
     angular_z: float,
-    radius: float = 0.154,
-    track: float = 0.614,
+    radius: float = 0.153,
+    track: float = 0.675,
     max_wheel_rad_s: float = MAX_WHEEL_RAD_S,
 ) -> tuple[int, int]:
     """Return integer (left, right) mrad/s, scaling both wheels together at the cap."""

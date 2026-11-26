@@ -66,6 +66,17 @@ Continue with [Install ROS 2 on Ubuntu](setup-ubuntu.md). Then come back here to
 5. Click the **Topics** tab. The `/chatter` topic shows 1 Hz.
 6. In Ubuntu, press Ctrl+C in both terminals.
 
+## Drive the simulation with a keyboard
+
+If you do not have a game controller plugged in, run `teleop_twist_keyboard` in a second Ubuntu terminal after starting `moon_yard.launch.xml`:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args \
+  -p stamped:=true -p frame_id:=base_link -p speed:=0.25 -p turn:=0.4
+```
+
+Hold `i` or `,` to drive forwards or backwards, hold `j` or `l` to turn, and press `k` to stop immediately. Releasing a key stops the rover automatically after 0.5 s via `cmd_vel_watchdog`. Use a gamepad (`innex_teleop`) for the real rover.
+
 ## Troubleshooting
 
 | Problem | Fix |

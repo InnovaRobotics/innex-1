@@ -39,7 +39,7 @@ The wheels have dry friction with no slip compliance, so the rover holds its pos
 
 The `/odom` topic starts at zero where the rover spawns, so it's relative to the spawn pose, not the arena frame.
 
-Drive the rover by publishing `geometry_msgs/msg/TwistStamped` on `/cmd_vel`.
+Drive the rover with a game controller (`innex_teleop`), or from a keyboard in a second terminal with `ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p stamped:=true -p frame_id:=base_link -p speed:=0.25 -p turn:=0.4`.
 
 | ROS topic | Type | Direction | Description |
 |---|---|---|---|

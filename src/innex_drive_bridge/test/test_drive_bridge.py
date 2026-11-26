@@ -25,7 +25,7 @@ def spin_until(node, predicate, timeout_s=3.0):
     raise AssertionError('Timed out waiting for condition')
 
 
-def make_cmd(frame_id='base_link', linear_x=0.077, angular_z=0.0, sec=100, nanosec=0):
+def make_cmd(frame_id='base_link', linear_x=0.0765, angular_z=0.0, sec=100, nanosec=0):
     """Build a TwistStamped command with an explicit header timestamp."""
     msg = TwistStamped()
     msg.header.frame_id = frame_id
@@ -53,20 +53,20 @@ def test_qos_arrival_watchdog_and_clock_skew():
 
         # Future laptop stamp (+60 s) and stepped-back stamp (1 s) must both work.
         now_sec = node.get_clock().now().seconds_nanoseconds()[0]
-        publisher.publish(make_cmd(sec=now_sec + 60, linear_x=0.077))
+        publisher.publish(make_cmd(sec=now_sec + 60, linear_x=0.0765))
         spin_until(node, lambda: decode(node.last_frame)[1:] == (500, 500))
 
-        publisher.publish(make_cmd(sec=1, linear_x=-0.077))
+        publisher.publish(make_cmd(sec=1, linear_x=-0.0765))
         spin_until(node, lambda: decode(node.last_frame)[1:] == (-500, -500))
 
         # Wrong frame_id or NaN velocity clears motion on the next timer tick.
-        publisher.publish(make_cmd(frame_id='map', linear_x=0.077))
+        publisher.publish(make_cmd(frame_id='map', linear_x=0.0765))
         spin_until(
             node,
             lambda: node.state == 'invalid_frame' and decode(node.last_frame)[1:] == (0, 0),
         )
 
-        publisher.publish(make_cmd(linear_x=0.077))
+        publisher.publish(make_cmd(linear_x=0.0765))
         spin_until(node, lambda: decode(node.last_frame)[1:] == (500, 500))
         publisher.publish(make_cmd(linear_x=math.nan))
         spin_until(
@@ -75,7 +75,7 @@ def test_qos_arrival_watchdog_and_clock_skew():
         )
 
         # Re-drive, then stop publishing and verify the 500 ms arrival timeout.
-        publisher.publish(make_cmd(linear_x=0.077))
+        publisher.publish(make_cmd(linear_x=0.0765))
         spin_until(node, lambda: decode(node.last_frame)[1:] == (500, 500))
         spin_until(
             node,
@@ -132,7 +132,7 @@ def test_virtual_serial_shutdown_zero_and_unplug():
         pub_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
         publisher = node.create_publisher(TwistStamped, '/cmd_vel', pub_qos)
         spin_until(node, lambda: publisher.get_subscription_count() > 0)
-        publisher.publish(make_cmd(linear_x=0.077))
+        publisher.publish(make_cmd(linear_x=0.0765))
         spin_until(node, lambda: read_frames()[-1][1:] == (500, 500))
 
         # Shut down while moving and verify the final (0, 0) frame reaches /dev/pts.
@@ -246,7 +246,8 @@ def test_xml_launch_ctrl_c():
         tail, _ = process.communicate(timeout=10)
         output += tail
         assert process.returncode == 0, output
-        assert 'Traceback' not in output, output
+        assert 'process has finished cleanly' in output, output
+        assert '[drive_bridge-1] Traceback' not in output, output
     finally:
         selector.close()
         if process.poll() is None:

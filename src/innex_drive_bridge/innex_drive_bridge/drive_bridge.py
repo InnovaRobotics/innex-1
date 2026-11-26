@@ -32,8 +32,8 @@ class DriveBridge(Node):
         self.dry_run = self.declare_parameter('dry_run', True, read_only).value
         serial_port = self.declare_parameter('serial_port', '', read_only).value
         rate = self.declare_parameter('send_rate_hz', 50.0, read_only).value
-        self.radius = self.declare_parameter('wheel_radius_m', 0.154, read_only).value
-        self.track = self.declare_parameter('track_width_m', 0.614, read_only).value
+        self.radius = self.declare_parameter('wheel_radius_m', 0.153, read_only).value
+        self.track = self.declare_parameter('track_width_m', 0.675, read_only).value
         self.max_wheel_rad_s = self.declare_parameter(
             'max_wheel_rad_s', MAX_WHEEL_RAD_S, read_only).value
         self.command_frame = self.declare_parameter(

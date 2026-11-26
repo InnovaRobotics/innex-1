@@ -2,6 +2,7 @@
 
 import math
 from pathlib import Path
+import re
 import struct
 import subprocess
 
@@ -68,11 +69,11 @@ def test_speed_limit_matches_firmware(firmware_runner):
 
 @pytest.mark.parametrize('linear,angular,expected', [
     (0.0, 0.0, (0, 0)),
-    (0.154, 0.0, (1000, 1000)),
-    (-0.077, 0.0, (-500, -500)),
-    (0.0, 0.5, (-997, 997)),
-    (0.0, -0.5, (997, -997)),
-    (1.54, 0.0, (1000, 1000)),
+    (0.153, 0.0, (1000, 1000)),
+    (-0.0765, 0.0, (-500, -500)),
+    (0.0, 0.4, (-882, 882)),
+    (0.0, -0.4, (882, -882)),
+    (1.53, 0.0, (1000, 1000)),
 ])
 def test_wheel_targets(linear, angular, expected):
     """Check units, turn signs, and symmetric clamping."""
@@ -133,7 +134,7 @@ def test_decoder_checks():
 
 def test_host_frames_drive_firmware_and_recover(firmware_runner):
     """Verify arming, motion, old-sequence rejection, CRC stop, and restart jump."""
-    left, right = wheel_targets(0.077, 0.1)
+    left, right = wheel_targets(0.0765, 0.1)
     corrupt = bytearray(encode(4, 300, 300))
     corrupt[8] ^= 1
     events = [
@@ -146,9 +147,24 @@ def test_host_frames_drive_firmware_and_recover(firmware_runner):
     ]
     assert run_frames(firmware_runner, events) == [
         (0, 0, 1),
-        (301, 699, 1),
-        (301, 699, 1),
+        (279, 721, 1),
+        (279, 721, 1),
         (0, 0, 0),
         (0, 0, 1),
         (-300, 400, 1),
     ]
+
+
+def test_geometry_matches_urdf():
+    """Keep drive_bridge.yaml wheel radius and track aligned with the URDF."""
+    repo_root = Path(__file__).resolve().parents[3]
+    urdf = (repo_root / 'src' / 'innex_description' / 'urdf' / 'innex_1.urdf.xacro').read_text()
+    cfg = (Path(__file__).resolve().parents[1] / 'config' / 'drive_bridge.yaml').read_text()
+
+    urdf_radius = float(re.search(r'name="wheel_radius"\s+value="([0-9.]+)"', urdf).group(1))
+    urdf_track = float(re.search(r'name="track"\s+value="([0-9.]+)"', urdf).group(1))
+    cfg_radius = float(re.search(r'wheel_radius_m:\s*([0-9.]+)', cfg).group(1))
+    cfg_track = float(re.search(r'track_width_m:\s*([0-9.]+)', cfg).group(1))
+
+    assert cfg_radius == pytest.approx(urdf_radius)
+    assert cfg_track == pytest.approx(urdf_track)
