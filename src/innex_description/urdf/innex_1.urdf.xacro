@@ -11,7 +11,7 @@
   <xacro:property name="chassis_x_offset" value="0.024"/>
   <xacro:property name="rail_size" value="0.030"/>
   <xacro:property name="edge_radius" value="${rail_size / 2}"/>
-  <xacro:property name="lidar_riser_height" value="0.180"/>
+  <xacro:property name="lidar_riser_height" value="0.230"/>
   <xacro:property name="ladder_overhang" value="0.150"/>
   <xacro:property name="ladder_width" value="0.165"/>
   <xacro:property name="wheel_radius" value="0.153"/>

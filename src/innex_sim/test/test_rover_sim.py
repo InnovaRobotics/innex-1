@@ -15,6 +15,8 @@ import rclpy
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
+from sensor_msgs.msg import PointCloud2
+import struct
 from tf2_ros import Buffer, TransformListener
 
 from helpers import CRATERS, START_ZONE
@@ -205,9 +207,33 @@ def test_front_and_rear_video_publish_h264_keyframes(sim):
 
 
 def test_ouster_points_publishes(sim):
-    topic = '/ouster/points'
-    frame_id = echo_once(sim.env, topic, 'header.frame_id').splitlines()[0].strip()
-    assert frame_id == 'os_sensor'
+    context = rclpy.Context()
+    rclpy.init(context=context, domain_id=int(sim.env['ROS_DOMAIN_ID']))
+    node = rclpy.create_node('test_ouster_listener', context=context)
+    executor = SingleThreadedExecutor(context=context)
+    executor.add_node(node)
+    clouds = []
+    node.create_subscription(PointCloud2, '/ouster/points', clouds.append, qos_profile_sensor_data)
+    try:
+        deadline = time.monotonic() + SPAWN_TIMEOUT
+        while time.monotonic() < deadline and not clouds:
+            executor.spin_once(timeout_sec=0.1)
+        assert clouds, 'no message on /ouster/points'
+        cloud = clouds[0]
+        assert cloud.header.frame_id == 'os_sensor'
+        ranges = []
+        for offset in range(0, len(cloud.data), cloud.point_step):
+            x, y, z = struct.unpack_from('<fff', cloud.data, offset)
+            if math.isfinite(x) and math.isfinite(y) and math.isfinite(z):
+                r = math.hypot(x, y, z)
+                if r > 0.0:
+                    ranges.append(r)
+        assert ranges, 'point cloud had no finite returns'
+        assert min(ranges) > 0.85, f'rover body blocked lidar at {min(ranges):.3f} m'
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown(context=context)
 
 
 def test_odom_to_base_link_transform(sim):
