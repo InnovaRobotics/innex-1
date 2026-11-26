@@ -1,66 +1,79 @@
 # Perception
 
-Perception finds what is around the rover and where the rover cannot drive. It reads data from [Sensors](sensors.md) and finds obstacles, craters and the berm. [Navigation and mission](navigation-and-mission.md) uses the result.
+Before navigation can pick a safe corridor across the obstacle zone, the rover has to turn raw 3D point clouds and stereo depth frames into a map of where its six wheels can and cannot roll. Perception reads scans and depth images from [Sensors](sensors.md), detects boulders, craters and the surrounding pit walls, and publishes those hazards to [Navigation and mission](navigation-and-mission.md).
 
-## Requirements
+Perception is planned for Stage 3 and has no ROS package on `main` (simulated `/ouster/points` and camera feeds already run in [`innex_sim`](../../src/innex_sim/README.md) to support development). Perception does not estimate where the rover sits in the arena; [Localisation](localisation.md) owns the pose, and perception uses that pose to pin each detected rock or crater onto the arena floor instead of leaving it in a moving camera frame.
 
-- Find positive obstacles: rocks, and anything else that sticks up from the sand.
-- Find negative obstacles: craters, and any other drop in the ground.
-- Remove returns from the arena walls before any autonomy software sees them.
-- Measure the berm, if the team decides the rover needs to.
-- Separate unknown space from a confirmed hazard.
+## Why craters are harder to detect than boulders
 
-## Inputs and outputs
+Compare what happens to sensor rays when they meet a `35 cm` boulder versus a `45 cm` crater, shown in side profile in the diagram:
 
-Perception takes point clouds and images from [Sensors](sensors.md). It sends hazards to [Navigation and mission](navigation-and-mission.md). The hazards might arrive as a cost map, as a list of objects, or in another form. The format is an open question.
+```text
+  Sensor on rover
+       *  \  \  \________________________
+           \  \       (empty shadow)     \
+            \  \____                      \____
+  ___________\ /    \_____________________/    \______
+              Boulder                     Crater
+           (dense cluster)            (missing returns)
+```
 
-Perception does not estimate the rover's pose. [Localisation](localisation.md) does that. Perception needs the pose to place what it sees on the arena floor.
+Follow the two ray bundles from the sensor on the left. A boulder rises above the level sand, so rays strike its front face from several metres out and bounce back as a dense cluster of elevated 3D points. Obstacles sticking up above the ground like this are called **positive obstacles**. Finding them is direct: fit a local plane or height grid to the surrounding sand and flag clusters standing well above it.
 
-## Rules
+A crater behaves in the opposite way. Because the cameras (`0.70 m` high) and LiDAR (`0.94 m` high) view the arena at a shallow grazing angle, the near lip of a crater blocks the line of sight to its floor. Instead of returning a neat bowl of recessed points, the sensor sees flat sand, the near lip, and then an empty gap where no points come back at all. Drops below ground level like this are called **negative obstacles**.
 
-- [Navigation and sensing](../rules.md#navigation-and-sensing): the walls cannot be used for mapping, navigation or collision avoidance. You must prove this to the judges.
-- [Autonomy conditions](../rules.md#autonomy-conditions): for travel, the judges set the obstacles so that the rover must detect them, map them and plan a route.
-- [Autonomy penalties](../rules.md#autonomy-penalties): touching a rock or driving over a crater in the obstacle zone costs points.
-- [During the run](../rules.md#during-the-run): do not push obstacles in the obstacle zone, and do not fill its craters.
-- [The arena](../rules.md#the-arena): rocks are about 30 to 40 cm across. Craters are no more than about 40 to 50 cm deep or wide.
+That empty gap is ambiguous on real sand. Missing returns can come from a `45 cm` crater waiting to trap a wheel, the geometric shadow behind a boulder, a dark or wet patch absorbing infrared light, or ground beyond the active-stereo projector's reach. Guessing wrong in either direction hurts the run: ignoring a real gap sends the rover into a crater for a `30`-point penalty, while flagging every empty patch as a crater walls off clean routes across flat sand.
 
-## Rocks and craters
+Range sharpens that problem further. Far ahead of the rover, LiDAR rings spread apart on the floor and hit at shallow angles where even a `5 cm` ripple casts a long shadow. Inside `2.42 m` of the central Ouster riser, the LiDAR's lowest beam overshoots level sand completely (see [Sensors](sensors.md#the-ouster-field-of-view-and-its-blind-zone)). Pairing the Ouster for mid-range positive obstacles and pit walls with downward-pitched front and rear OAK-D Pro depth cameras for near-field craters covers both zones.
 
-Rocks are easier to find. A rock is a cluster of points that stands above the ground. A sensor sees it from a distance, and its shape stands out against flat sand. Software can fit a ground surface and mark whatever sits well above it.
+## Unknown space, confirmed hazards and memory
 
-Craters are harder. A crater shows up as a gap in the points. From low on the rover, the near rim hides the floor behind it, so the sensor sees the rim and then nothing. A missing return can mean a crater, a shadow, a dark patch, or a sensor that cannot see that far. Software must tell these apart. An error in either direction costs points. Missing a crater means driving into it. Marking flat sand as a crater blocks a route that was safe.
+Picture the rover spawning in the start zone with a large boulder two metres ahead blocking its view of the sand behind it. A newcomer's first instinct is often to start with an empty map and mark only detected rocks as blocked. If you do that, every hidden crater sitting in a boulder's shadow looks like clean sand, and the planner routes straight into it.
 
-Distance makes this harder. From far away, the viewing angle is shallow, so the rim hides most of the floor. Close to the rover, the LiDAR sees no ground at all. [Sensors](sensors.md#the-ouster-field-of-view-and-its-blind-zone) explains why. The cameras must cover the near field.
+Flipping the default fails equally fast: if every unobserved square counts as a lethal obstacle, the rover boxes itself in and refuses to move. Perception resolves this by maintaining three distinct states for every cell on the floor: **free** (rays confirmed flat, traversable sand), **hazard** (a confirmed boulder, crater or wall) and **unknown** (occluded or uninspected so far). That three-way split lets the planner prefer confirmed free sand while driving cautiously up to the edge of unknown regions to reveal what sits behind an obstacle.
 
-## Unknown space and confirmed hazards
+Confirmed hazards also need bounded memory. Once a boulder passes alongside the middle axle, neither the front camera nor the rear camera sees it, and it sits inside the Ouster's near-field ring; forgetting it instantaneously causes the rover to swing its tail into the rock on the next turn. Remembering every single point forever causes the opposite failure: one clump of airborne dust during digging permanently blocks a valid lane. Decaying obstacle confidence over time when fresh rays pass cleanly through the same volume clears transient dust while preserving real rocks nearby.
 
-Space the rover has not seen is unknown. It is not free. A planner that treats unknown space as free drives into things it never saw. A planner that treats it as blocked cannot move. Perception labels each part of the area as free, hazard or unknown. The planner decides how much risk to accept in each part.
+## Crop boxes, image masks and keepout zones
 
-Hazards need short-lived memory. A rock the rover passed two seconds ago is still there, even though no sensor sees it. A hazard remembered for too long causes the opposite problem. A noisy detection then blocks a good route for the rest of the run. How long to remember a hazard is an open question.
+Three spatial filters sound alike in conversation while acting on different stages of the pipeline:
 
-## Crop boxes, masks and keepout zones
+- A **crop box** deletes 3D points inside or outside a fixed volume in the rover's body frame, such as stripping depth returns off INNEX-1's own `15 cm` protruding bucket ladder so perception never mistakes the ladder for a rock right in front of the bumper.
+- An **image mask** zeroes out fixed 2D pixel regions in a camera frame before stereo matching or AprilTag detection runs, hiding a chassis strut at the corner of the lens.
+- A **keepout zone** is a planner-level polygon marking areas off limits on the map. Because the rules forbid hard-coding the arena's `7.9 m x 4.4 m` dimensions into autonomy software, you cannot draw a static rectangular keepout fence for the pit walls; wall boundaries have to enter the map from live sensor returns.
 
-Three tools sound alike, but they do different jobs.
+## Handling the arena walls
 
-- A crop box removes 3D points that fall inside or outside a box. Use it to cut away points from the wall region.
-- An image mask blanks part of a camera image before a detector reads it.
-- A keepout zone is a constraint for the planner. It marks where the rover must not drive. A keepout zone must never serve as a landmark for localisation, because that would use the walls to find the rover's position.
+Any `360`-degree Ouster scan inside the Moon Yard picks up the surrounding wooden pit walls cleanly. Under the provisional 4 November 2026 organiser email clarification, mapping those live wall returns as obstacles for autonomy and navigation is expected to be allowed in the final 2027 rulebook, provided no arena dimensions are hard-coded.
 
-## Wall returns
+Because that answer remains provisional until the final rulebook is published, isolating wall points in one explicit stage of the point-cloud pipeline gives the team two advantages: wall returns feed straight into the hazard map under the expected 2027 rules, or switch cleanly to a filter if the final rulebook restricts them, and you can show inspection judges the exact node handling wall points in thirty seconds.
 
-A LiDAR scan from the middle of the arena includes the walls. The software must remove those returns before any autonomy consumer sees them. The team must also show the judges how it does this. A filter that removes the points, together with a clear description of where the filter sits in the data flow, makes that demonstration possible.
+## Requirements and competition rules
+
+Subsystem requirements:
+
+- Detect positive obstacles (`30` to `40 cm` boulders and raised terrain) and negative obstacles (craters up to `40` to `50 cm` wide or deep).
+- Detect arena walls from live sensor scans without hard-coding pit dimensions.
+- Maintain separate `free`, `hazard` and `unknown` ground states with bounded temporal memory.
+- Strip self-returns from the bucket ladder and chassis using body-frame crop boxes or masks.
+- Measure berm growth before and after a dump if mission logic requires volume confirmation.
+
+Applicable rules:
+
+- [Navigation and sensing](../rules.md#navigation-and-sensing) and [Organiser clarifications](../rules.md#organiser-clarifications-provisional): no hard-coded arena dimensions; live wall mapping is provisionally expected to be allowed in 2027, and sensing pipelines must be explained to inspection judges.
+- [Autonomy conditions](../rules.md#autonomy-conditions) and [Autonomy penalties](../rules.md#autonomy-penalties): obstacles are randomised so routes must be sensed live, and hitting a boulder or crater in the obstacle zone costs `30` points per incident.
+- [During the run](../rules.md#during-the-run) and [The arena](../rules.md#the-arena): boulders (`30` to `40 cm`) and craters (`40` to `50 cm`) cannot be pushed or filled in the obstacle zone.
 
 ## Open questions
 
-1. Which sensor detects craters, and at what range: the Ouster, the OAK-D depth, or both?
-2. How do crater detections reach the planner?
-3. How are wall returns removed, and how do we show the judges that nothing uses them?
-4. How long does the rover remember a hazard that it can no longer see?
-5. Can the Ouster measure the berm before and after a dump?
+1. Out to what distance do the `15-degree` pitched OAK-D Pro cameras reliably separate `40` to `50 cm` craters from shallow sand shadows?
+2. Which map structure passes hazards to navigation: a 2.5D elevation map (`grid_map`), Nav2's `voxel_layer` / `spatio_temporal_voxel_layer`, or a custom height-step detector feeding `Costmap2D`?
+3. What decay time keeps passed boulders in memory through a turn without locking airborne digging dust into the map?
+4. Can two static Ouster scans (before and after dumping) estimate deposited berm volume accurately enough to guide mission decisions?
 
 ## Further reading
 
+- [Sensors](sensors.md) and [`innex_sim` README](../../src/innex_sim/README.md)
 - [Ouster OS1 Rev 7 datasheet, version 3p1](https://data.ouster.io/downloads/datasheets/datasheet-rev7-v3p1-os1.pdf)
-- [OAK-D Pro specifications](https://docs.luxonis.com/hardware/products/OAK-D%20Pro)
-- [depthai-ros](https://docs.luxonis.com/software/ros/depthai-ros/)
+- [OAK-D Pro specifications](https://docs.luxonis.com/hardware/products/OAK-D%20Pro) and [DepthAI v3](https://docs.luxonis.com/software-v3/depthai/)
 - [Gazebo Harmonic sensors](https://gazebosim.org/docs/harmonic/sensors/)
