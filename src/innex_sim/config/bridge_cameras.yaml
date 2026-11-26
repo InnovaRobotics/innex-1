@@ -3,6 +3,8 @@
   ros_type_name: sensor_msgs/msg/Image
   gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
+  publisher_queue: 1
+  subscriber_queue: 1
 
 - ros_topic_name: /oak_front/rgb/camera_info
   gz_topic_name: /oak_front/camera_info
@@ -15,6 +17,8 @@
   ros_type_name: sensor_msgs/msg/Image
   gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
+  publisher_queue: 1
+  subscriber_queue: 1
 
 - ros_topic_name: /oak_rear/rgb/camera_info
   gz_topic_name: /oak_rear/camera_info
