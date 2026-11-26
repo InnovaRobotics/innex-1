@@ -4,6 +4,6 @@ drive_bridge:
     serial_port: ""
     send_rate_hz: 50.0
     # Provisional geometry from innex_description until measured on the rover.
-    wheel_radius_m: 0.154
-    track_width_m: 0.614
+    wheel_radius_m: 0.153
+    track_width_m: 0.675
     command_frame: base_link
