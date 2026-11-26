@@ -102,7 +102,7 @@ The rover's position (`x`, `y`, `z`) and orientation (heading, roll and pitch) e
 
 ## QoS
 
-Quality of service, per-topic ROS 2 settings governing reliability, history depth and durability. Incompatible QoS profiles between a publisher and subscriber silently prevent messages from connecting. See [Sensors](system/sensors.md#quality-of-service-for-sensors).
+Quality of service, per-topic ROS 2 settings governing reliability, history depth and durability. Incompatible QoS profiles between a publisher and subscriber silently prevent messages from connecting. See [Sensors](system/sensors.md#quality-of-service).
 
 ## Real-time factor
 
