@@ -96,7 +96,7 @@ def controller(tmp_path_factory):
     env['SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT'] = '0xffff/0xffff'
     log = (tmp_path_factory.mktemp('launch') / 'launch.log').open('w')
     process = subprocess.Popen(
-        ['ros2', 'launch', 'innex_teleop', 'joy.launch.py'],
+        ['ros2', 'launch', 'innex_teleop', 'joy.launch.xml'],
         env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     controller = Controller(int(env['ROS_DOMAIN_ID']))
     try:

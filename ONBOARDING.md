@@ -109,7 +109,7 @@ Run these steps in your Ubuntu environment. On a Mac, use an SSH session to the 
 
 6. Start the simulation. On a Mac, run this command in a terminal on the VM desktop, which is the UTM window. On Windows, run it in an Ubuntu terminal.
    ```bash
-   ros2 launch innex_sim moon_yard.launch.py
+   ros2 launch innex_sim moon_yard.launch.xml
    ```
    Gazebo opens with the arena. The rover is in the start zone.
 

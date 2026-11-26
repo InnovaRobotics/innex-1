@@ -62,7 +62,7 @@ Inertial measurement unit. A sensor that measures rotation rate with a gyroscope
 
 ## Launch file
 
-A file that starts a group of ROS 2 nodes with their settings, in one command. For example, `moon_yard.launch.py` starts the sim, the bridge and the rover model.
+A file that starts a group of ROS 2 nodes with their settings, in one command. For example, `moon_yard.launch.xml` starts the sim, the bridge and the rover model.
 
 ## LiDAR
 

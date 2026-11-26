@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="config"
+       default="$(find-pkg-share innex_teleop)/config/joy.yaml"
+       description="YAML parameter file for game_controller_node and teleop_node." />
+
+  <node pkg="joy" exec="game_controller_node" output="screen" on_exit="shutdown">
+    <param from="$(var config)" />
+  </node>
+
+  <node pkg="teleop_twist_joy" exec="teleop_node" output="screen" on_exit="shutdown">
+    <param from="$(var config)" />
+  </node>
+</launch>

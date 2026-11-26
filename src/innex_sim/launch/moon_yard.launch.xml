@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="gui"
+       default="true"
+       description="Start the Gazebo GUI. Use false for server only." />
+  <arg name="video"
+       default="false"
+       description="Start simulated camera encoders and Foxglove bridge." />
+  <arg name="x"
+       default="1.0"
+       description="Rover spawn x in the arena frame, in metres." />
+  <arg name="y"
+       default="3.4"
+       description="Rover spawn y in the arena frame, in metres." />
+  <arg name="yaw"
+       default="0.0"
+       description="Rover heading in radians. 0 faces east, towards the excavation zone." />
+
+  <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py" if="$(var gui)">
+    <arg name="gz_args" value="-r $(find-pkg-share innex_sim)/worlds/moon_yard.sdf" />
+    <arg name="on_exit_shutdown" value="true" />
+  </include>
+
+  <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py" unless="$(var gui)">
+    <arg name="gz_args" value="-r -s $(find-pkg-share innex_sim)/worlds/moon_yard.sdf" />
+    <arg name="on_exit_shutdown" value="true" />
+  </include>
+
+  <node pkg="innex_sim" exec="cmd_vel_watchdog" output="screen" on_exit="shutdown" />
+
+  <node pkg="ros_gz_bridge" exec="parameter_bridge" output="screen" on_exit="shutdown">
+    <param name="config_file" value="$(find-pkg-share innex_sim)/config/bridge.yaml" />
+  </node>
+
+  <include file="$(find-pkg-share innex_description)/launch/description.launch.xml">
+    <arg name="use_sim_time" value="true" />
+    <arg name="sim_cameras" value="$(var video)" />
+  </include>
+
+  <node pkg="ros_gz_sim" exec="create" output="screen">
+    <param name="world" value="moon_yard" />
+    <param name="topic" value="robot_description" />
+    <param name="name" value="innex_1" />
+    <param name="x" value="$(var x)" type="float" />
+    <param name="y" value="$(var y)" type="float" />
+    <param name="z" value="0.05" type="float" />
+    <param name="Y" value="$(var yaw)" type="float" />
+  </node>
+
+  <node pkg="ros_gz_bridge" exec="parameter_bridge" name="camera_image_bridge"
+        if="$(var video)" output="screen">
+    <param name="config_file" value="$(find-pkg-share innex_sim)/config/bridge_cameras.yaml" />
+  </node>
+
+  <node pkg="innex_sim" exec="sim_video_relay" name="front_sim_video_relay"
+        if="$(var video)" output="screen">
+    <param name="input_topic" value="/oak_front/rgb/image_raw" />
+    <param name="output_topic" value="/oak_front/video" />
+    <param name="frame_id" value="oak_front_rgb_camera_optical_frame" />
+  </node>
+
+  <node pkg="innex_sim" exec="sim_video_relay" name="rear_sim_video_relay"
+        if="$(var video)" output="screen">
+    <param name="input_topic" value="/oak_rear/rgb/image_raw" />
+    <param name="output_topic" value="/oak_rear/video" />
+    <param name="frame_id" value="oak_rear_rgb_camera_optical_frame" />
+  </node>
+
+  <include file="$(find-pkg-share foxglove_bridge)/launch/foxglove_bridge_launch.xml"
+           if="$(var video)">
+    <arg name="port" value="8765" />
+    <arg name="topic_whitelist" value="['^/oak_(front|rear)/video$']" />
+    <arg name="capabilities" value="[connectionGraph]" />
+    <arg name="client_topic_whitelist" value="['(?!)']" />
+    <arg name="service_whitelist" value="['(?!)']" />
+    <arg name="param_whitelist" value="['(?!)']" />
+  </include>
+</launch>
