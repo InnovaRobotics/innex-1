@@ -397,7 +397,9 @@ function formatInline(raw, currentPage, pageMap, glossaryCtx = null) {
     }
   }
 
-  text = text.replace(/\u0000TOK(\d+)\u0000/g, (_, idx) => protectedTokens[Number(idx)]);
+  while (/\u0000TOK\d+\u0000/.test(text)) {
+    text = text.replace(/\u0000TOK(\d+)\u0000/g, (_, idx) => protectedTokens[Number(idx)]);
+  }
   return text;
 }
 
@@ -1478,6 +1480,7 @@ function buildAllPages() {
         }
         renderOuster(0.94);
         requestAnimationFrame(syncOusterInd);
+        document.fonts?.ready?.then(syncOusterInd);
         window.addEventListener("resize", syncOusterInd, { passive: true });
       }
 
@@ -1648,6 +1651,7 @@ function buildAllPages() {
 
       renderKalmanValues(0.30, 0.10);
       requestAnimationFrame(syncPresetIndicator);
+      document.fonts?.ready?.then(syncPresetIndicator);
       window.addEventListener("resize", syncPresetIndicator, { passive: true });
     })();
   </script>
