@@ -1,110 +1,48 @@
-# Teensy drive prototype
+# teensy_drive
 
-**Status: desktop-tested prototype with a dry-run output backend. It cannot drive
-motors. Do not mark the parent issue or wheel bench test complete.**
+Teensy 4.1 USB serial receiver and 250 ms hardware watchdog for INNEX-1 wheel commands (`INX-144`).
 
-This directory contains the C++ safety core, USB message parser, desktop tests,
-Teensy 4.1 firmware entry point and Python protocol encoder. Motor-controller mode,
-wiring and session handling have not been confirmed. Consequently, `src/main.cpp`
-only stores target values; it does not configure or write any motor pins.
-This firmware is not ready for deployment with connected motors: high-impedance
-pins do not guarantee that the controllers remain off.
+`src/main.cpp` uses a dry-run motor backend (`DryRunOutput`) and does not drive physical motor pins until the Sabertooth 2x32 wiring is integrated. When flashed onto a bare Teensy 4.1, `LED_BUILTIN` lights whenever `DriveCore` is armed with a non-zero wheel target and turns off on `(0, 0)`, USB disconnect, or the 250 ms timeout, allowing USB bench verification without motors attached.
 
-## Use on Ubuntu 24.04 / WSL
+## Build and test on Ubuntu 24.04
 
-Run these commands from the Git repository root. Install the tools once on your
-development computer; do not install them on the Jetson.
+Install PlatformIO in a local virtual environment on your development machine (never on the Jetson):
 
 ```bash
-sudo apt update
-sudo apt install python3-venv build-essential
+sudo apt update && sudo apt install -y python3-venv build-essential
 python3 -m venv ~/.venvs/innex-pio
-source ~/.venvs/innex-pio/bin/activate
-python -m pip install platformio==6.1.18
+~/.venvs/innex-pio/bin/pip install platformio==6.1.18
+```
+
+Run the 10 C++ unit tests on your machine without a board:
+
+```bash
 cd firmware/teensy_drive
+~/.venvs/innex-pio/bin/pio test -e native
 ```
 
-1. Run the C++ tests without connecting a board:
+Compile the Teensy 4.1 firmware image (`.pio/build/teensy41/firmware.hex`) without flashing:
 
 ```bash
-pio test -e native
+~/.venvs/innex-pio/bin/pio run -e teensy41
 ```
 
-2. Test the host protocol encoder intended for the Jetson:
+In ROS 2 CI, `src/innex_drive_bridge/test/test_protocol.py` also compiles `lib/DriveCore/DriveCore.cpp` with `g++` on every pull request to verify wire and speed-limit compatibility against the Python host encoder.
 
-```bash
-python -m unittest discover -s tools -p 'test_*.py' -v
-python tools/protocol.py 1 0 0
-```
-
-The second command only prints an 18-byte message in hexadecimal. It does not
-open a serial port or send motor commands. Expected output:
-`44 52 01 00 01 00 00 00 00 00 00 00 00 00 00 00 be 37`.
-
-3. Compile the Teensy firmware without flashing it:
-
-```bash
-pio run -e teensy41
-```
-
-The resulting file is `.pio/build/teensy41/firmware.hex`.
-**A successful build does not establish that the firmware can control real motors.**
-No automatic upload or live serial-send commands are provided. PlatformIO downloads
-the toolchain on its first run.
-
-## Files and suggested reading order
+## Files
 
 | File | Purpose |
 |---|---|
-| `PROTOCOL.md` | Draft protocol and known limitations for joint review with INX-140 |
-| `lib/DriveCore/DriveCore.h` | Public interface, 250 ms timeout and prototype target bounds |
-| `lib/DriveCore/DriveCore.cpp` | CRC, parsing, sequence comparison, stopping and rearming |
-| `test/test_drive_core/test_main.cpp` | Safety behaviour tests without hardware |
-| `src/main.cpp` | Arduino setup/loop, bounded reads and the dry-run output adapter |
-| `tools/protocol.py` | Companion Python host encoder; not a ROS node |
-| `tools/test_protocol.py` | Python encoder tests |
-| `platformio.ini` | Build configuration pinning Native 1.2.1 and Teensy 5.0.0 |
+| `PROTOCOL.md` | 18-byte `DR` v1 frame layout, CRC-16, and arming rules |
+| `lib/DriveCore/DriveCore.h` | `Core` interface, `250` ms timeout, and `+/-1000` mrad/s cap |
+| `lib/DriveCore/DriveCore.cpp` | Frame parser, CRC-16, sequence check, and watchdog |
+| `src/main.cpp` | Non-blocking Teensy `loop()`, `LED_BUILTIN` bench indicator, and `DryRunOutput` |
+| `test/test_drive_core/test_main.cpp` | Desktop Unity tests for arming, timeout, wraparound, and corruption |
 
-Behaviour: start stopped, arm on a fresh zero command, accept newer motion targets,
-and stop and disarm after 250 ms without a new valid command. A fresh zero command
-is required before motion can resume. Old and duplicate messages do not refresh
-the watchdog; corrupt or out-of-range messages stop the core immediately.
-The core has no Arduino API dependencies, so tests and firmware share the same
-implementation.
+## Integrating the Sabertooth 2x32 controllers
 
-## Remaining work and acceptance
+Before replacing `DryRunOutput` in `src/main.cpp` and running the block test (`INX-142`) under [Rover safety](../../docs/safety.md):
 
-This prototype relates to firmware issue INX-144. INX-144 remains open until the
-required bench test with the wheels off the ground has passed.
-
-- Agree the protocol with the INX-140 owner. The Python encoder is an integration
-  starting point; this directory does not implement the ROS bridge.
-- Add session and freshness handling to reject queued commands after a restart;
-  see PROTOCOL.md.
-- Confirm Sabertooth control mode, pins, electrical stop defaults, encoders and
-  closed-loop speed control.
-- Replace DryRunOutput with a real controller adapter. The stop path must actually
-  stop all drive outputs.
-- Measure worst-case loop latency, serial backlog and output stopping latency to
-  meet the end-to-end 250 ms requirement.
-- Implement the independent 500 ms timeout in the bridge; that ROS node is outside
-  this directory.
-- Run `colcon build`, `colcon test` and `colcon test-result --verbose` in Ubuntu.
-- Before hardware testing, have the person present confirm the E-stop, wheels off
-  the ground and fixed run duration under AGENTS.md and docs/safety.md. Send zero
-  at the end. Flash only when explicitly requested and a person is present.
-  No board was flashed and no motors were operated during this work.
-
-Submit changes on a task branch through a PR. Do not push directly to main.
-
-## Checked upstream references
-
-- [PlatformIO Core 6.1.18](https://github.com/platformio/platformio-core/releases/tag/v6.1.18)
-- [Teensy platform 5.0.0 / Teensyduino 1.59](https://github.com/platformio/platform-teensy/releases/tag/v5.0.0)
-- [Native platform 1.2.1](https://github.com/platformio/platform-native/releases/tag/v1.2.1)
-- [Shared core code in lib](https://docs.platformio.org/en/stable/advanced/unit-testing/structure/shared-code.html)
-- [Teensy USB Serial API](https://www.pjrc.com/teensy/td_serial.html)
-
-PJRC documents that USB Serial is initialised before setup and Serial.begin() is
-optional. This entry point does not wait for a host or use delay, blocking reads
-or application-level dynamic allocation.
+1. Daisy-chain all Sabertooth 2x32 `S1` inputs onto one Teensy hardware UART transmit pin (such as `Serial1` TX on pin 1) using checksummed Packet Serial addresses (`128`, `129`, `130`), and set each Sabertooth's built-in hardware serial timeout (`100` to `250` ms) in DEScribe so the motor drivers stop in hardware if the `S1` wire disconnects.
+2. Keep every Teensy 4.1 pin at `3.3 V` or below (Teensy 4.1 pins are not `5 V` tolerant): step down any `5 V` motor Hall-encoder signals or Sabertooth `S2` lines to `3.3 V` before connecting them to the Teensy.
+3. Map `+/-1000` open-loop to a conservative Sabertooth duty limit first for the block test (`INX-142`) before adding encoder feedback for localisation.

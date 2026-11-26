@@ -1,50 +1,22 @@
-# Draft drive protocol v1 — not approved for rover deployment
+# Drive serial protocol v1
 
-Agree this draft with INX-140 before integration. The companion Python codec
-in `tools/protocol.py` implements the host encoding, not a ROS bridge.
-All multi-byte fields are little-endian. A frame is exactly 18 bytes:
+`innex_drive_bridge` (`src/innex_drive_bridge/innex_drive_bridge/protocol.py`) and `DriveCore` (`lib/DriveCore/`) exchange fixed 18-byte little-endian frames over Teensy USB serial:
 
 | Offset | Size | Meaning |
 |---|---|---|
-| 0 | 2 | ASCII `DR` |
-| 2 | 1 | Version 1 |
-| 3 | 1 | Reserved, must be zero |
-| 4 | 4 | Unsigned sequence number |
-| 8 | 4 | Signed left target, milliradians/second |
-| 12 | 4 | Signed right target, milliradians/second |
-| 16 | 2 | CRC-16/CCITT-FALSE of bytes 0–15 |
+| 0 | 2 | ASCII `DR` (`0x44 0x52`) |
+| 2 | 1 | Protocol version (`1`) |
+| 3 | 1 | Reserved (`0`) |
+| 4 | 4 | Unsigned 32-bit sequence number |
+| 8 | 4 | Signed 32-bit left wheel target (`-1000` to `1000` mrad/s) |
+| 12 | 4 | Signed 32-bit right wheel target (`-1000` to `1000` mrad/s) |
+| 16 | 2 | CRC-16/CCITT-FALSE over bytes 0 to 15 |
 
-CRC: polynomial 0x1021, initial 0xffff, no reflection, no final XOR.
-`123456789` produces 0x29b1. Positive means forward on both sides; the future
-hardware adapter must compensate for wiring direction. The prototype rejects
-values outside +/-1000 mrad/s (1 rad/s). This is a conservative test bound,
-not a measured or approved motor speed limit. Targets are absolute, not increments.
+CRC-16 parameters: polynomial `0x1021`, initial value `0xffff`, no reflection, no final XOR (`123456789` gives `0x29b1`, and `(seq=1, left=0, right=0)` encodes as `44 52 01 00 01 00 00 00 00 00 00 00 00 00 00 00 be 37`). Targets are absolute setpoints, where positive values mean forward on both sides and `+/-1000` mrad/s (`1.0` rad/s) is the prototype cap until the block test (`INX-142`).
 
-At startup, only a zero/zero command can arm the core; a subsequent newer command
-can request motion. At age >=250 ms, both targets become zero and the core
-disarms. A fresh zero is required before further motion. Timeout uses local
-monotonic milliseconds, not ROS time. Duplicates, old frames and incomplete
-frames never refresh it. A malformed complete frame or an out-of-range command
-stops the core immediately. Noise can cause extra stops; this favours stopping
-over continuing motion. Partial frames expire after a 250 ms inter-byte gap.
+## Safety rules in `DriveCore`
 
-Sequence comparison: delta = new - previous modulo 2^32; accept only
-0 < delta < 2^31. Never clear the last accepted sequence on timeout/disconnect.
-On bridge-only restart, recover the continuing sequence through a future session
-protocol; resetting the bridge counter to zero is not supported. Power-cycling
-the Teensy clears RAM and requires a fresh zero command.
-
-Integration blockers: agree a session/freshness handshake so delayed data or a
-previous host session cannot arm a freshly booted device. CRC detects corruption,
-not sender identity or message age. Sequence alone cannot detect a delayed but
-increasing backlog. Do not deploy this draft to a rover before resolving that.
-The host must enforce its own 500 ms command timeout and send at a regular rate
-(proposed 50 Hz), using only fresh commands and bounded queues. That host watchdog
-is outside this firmware implementation.
-
-Timing: the core transitions at exactly 250 ms when ticked. A polling loop adds
-its scheduling and output-adapter latency, so this does not prove the bench
-requirement of stopping physical outputs within 250 ms. Before motor deployment,
-measure the worst-case latency and use an independently scheduled stop or a
-conservative earlier internal deadline to meet the end-to-end 250 ms bound.
-Never lengthen the existing timeout.
+- Startup and recovery require a valid `(0, 0)` frame before `DriveCore` arms and accepts non-zero targets.
+- If `250` ms (`kTimeoutMs`) pass on `millis()` without a valid frame, both targets drop to `0` and `DriveCore` disarms.
+- Sequence comparison uses `uint32_t(incoming - previous)` and accepts values in `1 .. 2^31 - 1`, ignoring duplicates and out-of-order frames without refreshing the `250` ms timer.
+- Any frame with a bad header, bad CRC, or out-of-range target disarms `DriveCore` immediately; partial frames expire after a `250` ms inter-byte gap.
