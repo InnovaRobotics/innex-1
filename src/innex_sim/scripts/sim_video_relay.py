@@ -11,15 +11,17 @@ import numpy as np
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image
+
+KEYFRAME_INTERVAL_NS = 1_000_000_000
 
 
 class SimVideoRelay(Node):
     """Subscribe to one simulated image topic and publish H.264 video."""
 
-    def __init__(self):
-        super().__init__('sim_video_relay')
+    def __init__(self, **kwargs):
+        super().__init__('sim_video_relay', **kwargs)
 
         self.declare_parameter('input_topic', '/oak_front/rgb/image_raw')
         self.declare_parameter('output_topic', '/oak_front/video')
@@ -33,10 +35,15 @@ class SimVideoRelay(Node):
         self.bitrate = int(self.get_parameter('bitrate').value)
         self.encoder = None
         self.frame_number = 0
+        self.last_keyframe_ns = 0
+        self.last_timestamp_ns = 0
 
         output_topic = self.get_parameter('output_topic').value
         self.publisher_ = self.create_publisher(
-            CompressedVideo, output_topic, qos_profile_sensor_data)
+            CompressedVideo,
+            output_topic,
+            QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE),
+        )
         self.create_subscription(
             Image,
             self.get_parameter('input_topic').value,
@@ -57,11 +64,12 @@ class SimVideoRelay(Node):
         encoder.framerate = Fraction(self.fps, 1)
         encoder.bit_rate = self.bitrate * 1000
         encoder.gop_size = self.fps
+        encoder.thread_count = 1
         encoder.options = {
             'profile': 'baseline',
             'preset': 'ultrafast',
             'tune': 'zerolatency',
-            'x264-params': 'annexb=1:repeat-headers=1:bframes=0',
+            'x264-params': 'annexb=1:repeat-headers=1:bframes=0:sliced-threads=0',
         }
         encoder.open()
         return encoder
@@ -75,6 +83,7 @@ class SimVideoRelay(Node):
             self.encoder = self._create_encoder(
                 image_msg.width, image_msg.height)
             self.frame_number = 0
+            self.last_keyframe_ns = 0
 
         rows = np.frombuffer(image_msg.data, dtype=np.uint8).reshape(
             image_msg.height, image_msg.step)
@@ -87,14 +96,17 @@ class SimVideoRelay(Node):
         frame.time_base = self.encoder.time_base
         self.frame_number += 1
 
-        timestamp_ns = (
-            image_msg.header.stamp.sec * 1_000_000_000
-            + image_msg.header.stamp.nanosec
-        )
-        if timestamp_ns == 0:
-            timestamp_ns = time.time_ns()
+        now_mono_ns = time.monotonic_ns()
+        if (self.last_keyframe_ns == 0
+                or now_mono_ns - self.last_keyframe_ns >= KEYFRAME_INTERVAL_NS):
+            frame.pict_type = av.video.frame.PictureType.I
+
+        timestamp_ns = max(time.time_ns(), self.last_timestamp_ns + 1_000)
+        self.last_timestamp_ns = timestamp_ns
 
         for packet in self.encoder.encode(frame):
+            if packet.is_keyframe:
+                self.last_keyframe_ns = now_mono_ns
             self.publisher_.publish(make_compressed_video(
                 timestamp_ns, bytes(packet), self.frame_id))
 
