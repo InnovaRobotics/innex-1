@@ -494,3 +494,243 @@ export function renderSubsystemLoopDiagram() {
   </figcaption>
 </figure>`;
 }
+
+export function renderCostmapInflationDiagram() {
+  const cols = 11;
+  const rows = 5;
+  const cell = 36;
+  const x0 = 28;
+  const y0 = 20;
+  const cx = 5;
+  const cy = 2;
+
+  const cellsSvg = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const dist = Math.hypot(c - cx, r - cy);
+      let fill = "#0b0d10";
+      let label = "0";
+      let textCol = "#666d7a";
+      if (c === cx && r === cy) {
+        fill = "#eceef2";
+        label = "XX";
+        textCol = "#0a0a0a";
+      } else if (dist <= 1.45) {
+        fill = "rgba(79,123,217,0.28)";
+        label = "99";
+        textCol = "#eceef2";
+      } else if (dist <= 2.3) {
+        fill = "rgba(79,123,217,0.14)";
+        label = "40";
+        textCol = "#b2b8c2";
+      } else if (dist <= 3.2) {
+        fill = "rgba(79,123,217,0.06)";
+        label = "10";
+        textCol = "#8e95a2";
+      }
+      const x = x0 + c * cell;
+      const y = y0 + r * cell;
+      cellsSvg.push(
+        `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${fill}" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>` +
+          `<text x="${x + cell / 2}" y="${y + cell / 2 + 4}" text-anchor="middle" fill="${textCol}" font-family="${SANS}" font-size="11" font-weight="${label === "XX" || label === "99" ? "600" : "400"}">${label}</text>`
+      );
+    }
+  }
+
+  return `
+<figure class="tech-figure">
+  <div class="figure-frame">
+    <svg viewBox="0 0 700 220" role="img" aria-label="2D costmap grid showing a lethal boulder cell surrounded by an impassable 99-cost inscribed radius ring and decaying 40 and 10 buffer cells, with a safe curved route clearing the ring.">
+      ${cellsSvg.join("\n      ")}
+      <!-- Planned low-cost trajectory curving smoothly outside the 99 ring -->
+      <path d="M 38 146 C 110 146, 138 28, 226 28 C 314 28, 342 128, 414 128" fill="none" stroke="#4f7bd9" stroke-width="2.2"/>
+      <circle cx="38" cy="146" r="3.5" fill="#4f7bd9"/>
+
+      <!-- Legend on right -->
+      <g font-family="${SANS}" font-size="12">
+        <rect x="454" y="34" width="14" height="14" rx="2" fill="#eceef2"/>
+        <text x="478" y="45" fill="#eceef2" font-weight="500">Lethal obstacle (XX)</text>
+
+        <rect x="454" y="64" width="14" height="14" rx="2" fill="rgba(79,123,217,0.28)" stroke="#4f7bd9"/>
+        <text x="478" y="75" fill="#eceef2">Inscribed ring (99, no-go)</text>
+        <text x="478" y="91" fill="#8e95a2" font-size="11">Half-width ≥ 0.34 m prevents wheel clip</text>
+
+        <rect x="454" y="112" width="14" height="14" rx="2" fill="rgba(79,123,217,0.12)" stroke="rgba(255,255,255,0.18)"/>
+        <text x="478" y="123" fill="#b2b8c2">Decaying buffer (40 → 10)</text>
+
+        <line x1="454" y1="152" x2="470" y2="152" stroke="#4f7bd9" stroke-width="2.2"/>
+        <text x="478" y="156" fill="#7098ec" font-weight="500">Lowest-cost planned route</text>
+      </g>
+    </svg>
+  </div>
+  <figcaption class="figure-caption">
+    Inflating every obstacle cell outward by the rover's inscribed half-width turns six-wheel footprint clearance into a single-cell cost lookup.
+  </figcaption>
+</figure>`;
+}
+
+export function renderSerialPacketDiagram() {
+  const fields = [
+    { x: 20, w: 74, bytes: "0–1", val: "44 52", name: "Header", sub: 'ASCII "DR"', accent: false },
+    { x: 98, w: 50, bytes: "2", val: "01", name: "Ver", sub: "v1", accent: false },
+    { x: 152, w: 50, bytes: "3", val: "00", name: "Rsvd", sub: "Zero", accent: false },
+    { x: 206, w: 124, bytes: "4–7", val: "01 00 00 00", name: "Sequence", sub: "uint32 LE", accent: false },
+    { x: 334, w: 120, bytes: "8–11", val: "00 00 00 00", name: "Left target", sub: "int32 mrad/s", accent: false },
+    { x: 458, w: 120, bytes: "12–15", val: "00 00 00 00", name: "Right target", sub: "int32 mrad/s", accent: false },
+    { x: 582, w: 98, bytes: "16–17", val: "be 37", name: "CRC-16", sub: "CCITT-FALSE", accent: true },
+  ];
+
+  return `
+<figure class="tech-figure">
+  <div class="figure-frame">
+    <svg viewBox="0 0 700 142" role="img" aria-label="18-byte little-endian DR v1 serial packet showing byte offsets 0 to 17 for header DR, version 1, reserved 0, 32-bit sequence counter, signed 32-bit left and right wheel targets in milliradians per second, and 16-bit CRC-16 checksum.">
+      ${fields
+        .map(
+          (f) => `
+        <text x="${f.x + f.w / 2}" y="22" text-anchor="middle" fill="#8e95a2" font-family="${SANS}" font-size="10.5">Byte ${f.bytes}</text>
+        <rect x="${f.x}" y="30" width="${f.w}" height="44" rx="2" fill="${
+            f.accent ? "rgba(79,123,217,0.14)" : "#0b0d10"
+          }" stroke="${f.accent ? "#4f7bd9" : "rgba(255,255,255,0.16)"}" stroke-width="${f.accent ? "1.5" : "1"}"/>
+        <text x="${f.x + f.w / 2}" y="57" text-anchor="middle" fill="${
+            f.accent ? "#7098ec" : "#eceef2"
+          }" font-family="'Geist Mono', 'SF Mono', Menlo, monospace" font-size="12" font-weight="${
+            f.accent ? "600" : "400"
+          }">${f.val}</text>
+        <text x="${f.x + f.w / 2}" y="94" text-anchor="middle" fill="${
+            f.accent ? "#7098ec" : "#eceef2"
+          }" font-family="${SANS}" font-size="12" font-weight="500">${f.name}</text>
+        <text x="${f.x + f.w / 2}" y="111" text-anchor="middle" fill="#8e95a2" font-family="${SANS}" font-size="10.5">${f.sub}</text>`
+        )
+        .join("")}
+      <!-- Span bracket showing CRC coverage over bytes 0..15 -->
+      <path d="M 20 124 L 20 130 L 578 130 L 578 124" fill="none" stroke="rgba(79,123,217,0.5)" stroke-width="1"/>
+      <line x1="578" y1="130" x2="631" y2="130" stroke="rgba(79,123,217,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+    </svg>
+  </div>
+  <figcaption class="figure-caption">
+    Startup arming frame (<code>seq = 1</code>, <code>left = 0</code>, <code>right = 0</code>): CRC-16 covers bytes 0 to 15, disarming <code>DriveCore</code> immediately if any bit flips on the wire.
+  </figcaption>
+</figure>`;
+}
+
+export function renderSkidSteerMathBlock() {
+  return `
+<div class="math-block" role="math" aria-label="left wheel speed equals v minus half track times omega; right wheel speed equals v plus half track times omega">
+  <div class="math-row">
+    <span>left wheel speed = <em>v</em> −</span>
+    <span class="math-frac">
+      <span class="math-num">track</span>
+      <span class="math-den">2</span>
+    </span>
+    <span>× <em>ω</em></span>
+  </div>
+  <div class="math-row">
+    <span>right wheel speed = <em>v</em> +</span>
+    <span class="math-frac">
+      <span class="math-num">track</span>
+      <span class="math-den">2</span>
+    </span>
+    <span>× <em>ω</em></span>
+  </div>
+</div>`;
+}
+
+export function renderOusterMathBlock() {
+  return `
+<div class="math-block" role="math" aria-label="nearest level-ground hit equals LiDAR height divided by tangent of 21.2 degrees">
+  <div class="math-row">
+    <span>nearest level-ground hit =</span>
+    <span class="math-frac">
+      <span class="math-num">LiDAR height</span>
+      <span class="math-den">tan(21.2°)</span>
+    </span>
+  </div>
+</div>`;
+}
+
+export function renderInteractiveOusterFigure() {
+  return `
+<figure class="tech-figure" id="ouster-explorer">
+  <div class="figure-frame">
+    <svg id="ouster-svg" viewBox="0 0 700 226" role="img" aria-label="Interactive side-profile geometry of the Ouster OS1-128 vertical field of view, showing the 0.75 m stowed height limit, OAK-D Pro near-field view, and the nearest level-ground laser hit.">
+      <!-- Ground line and distance ticks (0 m to 3.0 m, 175 px/m starting at rover centre x=96) -->
+      <line x1="24" y1="186" x2="676" y2="186" stroke="rgba(255,255,255,0.22)" stroke-width="1.2"/>
+      <g fill="#8e95a2" font-family="${SANS}" font-size="11.5" text-anchor="middle">
+        <line x1="96" y1="186" x2="96" y2="192" stroke="rgba(255,255,255,0.22)"/>
+        <text x="96" y="209">0 m</text>
+        <line x1="271" y1="186" x2="271" y2="192" stroke="rgba(255,255,255,0.22)"/>
+        <text x="271" y="209">1.0 m</text>
+        <line x1="446" y1="186" x2="446" y2="192" stroke="rgba(255,255,255,0.22)"/>
+        <text x="446" y="209">2.0 m</text>
+        <line x1="621" y1="186" x2="621" y2="192" stroke="rgba(255,255,255,0.22)"/>
+        <text x="621" y="209">3.0 m</text>
+      </g>
+
+      <!-- 0.75 m pre-run inspection height limit line (130 px/m vertical scale -> y = 186 - 0.75*130 = 88.5) -->
+      <line x1="24" y1="88.5" x2="676" y2="88.5" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-dasharray="5 4"/>
+      <text x="670" y="81" text-anchor="end" fill="#8e95a2" font-family="${SANS}" font-size="11">0.75 m inspection height cap</text>
+
+      <!-- Six-wheel rover side silhouette (1.06 m long -> 185 px? Use proportional 130 px/m scale on both axes? Wait: keep clean 130 px/m height & 175 px/m horizontal!) -->
+      <!-- Chassis 0.18m to 0.71m height -> y=162.6 to y=93.7 -->
+      <rect x="42" y="94" width="108" height="68" rx="2" fill="#13161b" stroke="#b2b8c2" stroke-width="1.3"/>
+      <circle cx="56" cy="170" r="15.5" fill="#0b0d10" stroke="#8e95a2" stroke-width="1.3"/>
+      <circle cx="96" cy="170" r="15.5" fill="#0b0d10" stroke="#8e95a2" stroke-width="1.3"/>
+      <circle cx="136" cy="170" r="15.5" fill="#0b0d10" stroke="#8e95a2" stroke-width="1.3"/>
+
+      <!-- Front OAK-D Pro near-field 15-deg downward cone -->
+      <polygon points="150,98 370,186 168,186" fill="rgba(255,255,255,0.035)"/>
+      <line x1="150" y1="98" x2="370" y2="186" stroke="#8e95a2" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="236" y="176" fill="#8e95a2" font-family="${SANS}" font-size="11">OAK-D Pro covers near sand</text>
+
+      <!-- Dynamic Ouster riser, sensor body, and +/-21.2 deg fan -->
+      <line id="ouster-riser" x1="96" y1="94" x2="96" y2="64" stroke="#b2b8c2" stroke-width="2"/>
+      <rect id="ouster-body" x="88" y="56" width="16" height="8" rx="1" fill="#eceef2"/>
+      <polygon id="ouster-fan" points="96,60 676,12 676,186 520,186" fill="rgba(79,123,217,0.13)"/>
+      <line id="ouster-top-ray" x1="96" y1="60" x2="676" y2="12" stroke="#4f7bd9" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <line id="ouster-bot-ray" x1="96" y1="60" x2="520" y2="186" stroke="#4f7bd9" stroke-width="1.9"/>
+      <circle id="ouster-hit-dot" cx="520" cy="186" r="3.8" fill="#4f7bd9"/>
+      <text id="ouster-hit-label" x="520" y="174" text-anchor="middle" fill="#7098ec" font-family="${SANS}" font-size="12" font-weight="500">2.42 m first hit</text>
+    </svg>
+
+    <div class="kalman-metrics" role="status" aria-live="polite">
+      <div class="metric-cell">
+        <span class="metric-name">LiDAR base height</span>
+        <span class="metric-val" id="ouster-out-base">0.94 m</span>
+      </div>
+      <div class="metric-cell">
+        <span class="metric-name">Top of sensor</span>
+        <span class="metric-val" id="ouster-out-top">1.00 m</span>
+      </div>
+      <div class="metric-cell">
+        <span class="metric-name">Nearest ground hit</span>
+        <span class="metric-val is-accent" id="ouster-out-hit">2.42 m</span>
+      </div>
+      <div class="metric-cell">
+        <span class="metric-name">75 cm stowed box</span>
+        <span class="metric-val" id="ouster-out-box">Fold for inspection</span>
+      </div>
+    </div>
+
+    <div class="kalman-controls" style="grid-template-columns: 1fr;">
+      <div class="slider-field">
+        <div class="slider-label-row">
+          <label for="slider-ouster-h">LiDAR mount height above sand</label>
+          <span class="slider-readout" id="label-ouster-h">0.94 m</span>
+        </div>
+        <input id="slider-ouster-h" class="accent-slider" type="range" min="0.50" max="0.96" step="0.01" value="0.94"/>
+      </div>
+    </div>
+
+    <div class="preset-bar" id="ouster-preset-bar" role="group" aria-label="LiDAR mount presets">
+      <div class="preset-indicator" id="ouster-preset-indicator" aria-hidden="true"></div>
+      <button type="button" class="preset-btn ouster-preset" data-h="0.60" aria-pressed="false">Low mount (0.60 m)</button>
+      <button type="button" class="preset-btn ouster-preset" data-h="0.69" aria-pressed="false">Under 75 cm cap (0.69 m)</button>
+      <button type="button" class="preset-btn ouster-preset" data-h="0.94" aria-pressed="true">Central 23 cm riser (0.94 m)</button>
+    </div>
+  </div>
+  <figcaption class="figure-caption">
+    Raising the Ouster clears the rover chassis across 360 degrees at the cost of pushing the innermost scan ring farther out and exceeding the 0.75 m starting box unless stowed.
+  </figcaption>
+</figure>`;
+}
+

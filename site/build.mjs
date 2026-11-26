@@ -12,6 +12,11 @@ import {
   renderMissionCycleDiagram,
   renderHardwareConnectionsDiagram,
   renderSubsystemLoopDiagram,
+  renderCostmapInflationDiagram,
+  renderSerialPacketDiagram,
+  renderSkidSteerMathBlock,
+  renderOusterMathBlock,
+  renderInteractiveOusterFigure,
 } from "./diagrams.mjs";
 import { GLOSSARY_VISUALS } from "./glossary-visuals.mjs";
 
@@ -546,6 +551,26 @@ function parseMarkdown(md, currentPage, pageMap, glossaryCatalogue) {
         content.includes("Crater")
       ) {
         htmlParts.push(renderPositiveNegativeObstaclesDiagram());
+      } else if (
+        currentPage.repoRel === "docs/system/navigation-and-mission.md" &&
+        content.includes("[XX]")
+      ) {
+        htmlParts.push(renderCostmapInflationDiagram());
+      } else if (
+        currentPage.repoRel === "docs/system/teleop-and-control.md" &&
+        content.includes("44 52")
+      ) {
+        htmlParts.push(renderSerialPacketDiagram());
+      } else if (
+        currentPage.repoRel === "docs/system/teleop-and-control.md" &&
+        content.includes("left wheel speed")
+      ) {
+        htmlParts.push(renderSkidSteerMathBlock());
+      } else if (
+        currentPage.repoRel === "docs/system/sensors.md" &&
+        content.includes("nearest level-ground hit")
+      ) {
+        htmlParts.push(renderOusterMathBlock());
       } else {
         htmlParts.push(`<pre><code>${escapeHtml(content)}</code></pre>`);
       }
@@ -646,6 +671,13 @@ function parseMarkdown(md, currentPage, pageMap, glossaryCatalogue) {
       paraText.includes("iterative closest point (ICP)")
     ) {
       htmlParts.push(renderIcpWallDiagram());
+    }
+    if (
+      currentPage.repoRel === "docs/system/sensors.md" &&
+      currentH2Section?.id === "lidar-field-of-view" &&
+      paraText.includes("0.75 m")
+    ) {
+      htmlParts.push(renderInteractiveOusterFigure());
     }
   }
 
@@ -1086,6 +1118,117 @@ function buildAllPages() {
           document.fonts.ready.then(updateTocOnScroll);
         }
         updateTocOnScroll();
+      }
+
+      const sliderOuster = document.getElementById("slider-ouster-h");
+      if (sliderOuster) {
+        const tan212 = Math.tan((21.2 * Math.PI) / 180);
+        const sensorBodyH = 0.0583;
+        const groundY = 186;
+        const pxPerMVert = 130;
+        const originX = 96;
+        const pxPerMHoriz = 175;
+
+        const riserEl = document.getElementById("ouster-riser");
+        const bodyEl = document.getElementById("ouster-body");
+        const fanEl = document.getElementById("ouster-fan");
+        const topRayEl = document.getElementById("ouster-top-ray");
+        const botRayEl = document.getElementById("ouster-bot-ray");
+        const hitDotEl = document.getElementById("ouster-hit-dot");
+        const hitLabelEl = document.getElementById("ouster-hit-label");
+
+        const labelH = document.getElementById("label-ouster-h");
+        const outBase = document.getElementById("ouster-out-base");
+        const outTop = document.getElementById("ouster-out-top");
+        const outHit = document.getElementById("ouster-out-hit");
+        const outBox = document.getElementById("ouster-out-box");
+        const oPresets = [...document.querySelectorAll(".ouster-preset")];
+        const oInd = document.getElementById("ouster-preset-indicator");
+
+        let curH = 0.94;
+        let oRaf = 0;
+        const easeO = (t) => 1 - Math.pow(1 - t, 3.6);
+
+        function syncOusterInd() {
+          if (!oInd) return;
+          const active = oPresets.find((b) => b.getAttribute("aria-pressed") === "true");
+          if (!active) {
+            oInd.style.opacity = "0";
+            return;
+          }
+          oInd.style.opacity = "1";
+          oInd.style.width = \`\${active.offsetWidth}px\`;
+          oInd.style.transform = \`translateX(\${active.offsetLeft}px)\`;
+        }
+
+        function renderOuster(h) {
+          curH = h;
+          const topH = h + sensorBodyH;
+          const hitM = h / tan212;
+          const baseY = groundY - h * pxPerMVert;
+          const opticY = baseY - 4;
+          const hitX = Math.min(668, originX + hitM * pxPerMHoriz);
+
+          riserEl.setAttribute("y2", baseY.toFixed(1));
+          bodyEl.setAttribute("y", (baseY - 8).toFixed(1));
+          const topEndY = Math.max(8, opticY - 48);
+          fanEl.setAttribute("points", \`\${originX},\${opticY.toFixed(1)} 676,\${topEndY.toFixed(1)} 676,\${groundY} \${hitX.toFixed(1)},\${groundY}\`);
+          topRayEl.setAttribute("y1", opticY.toFixed(1));
+          topRayEl.setAttribute("y2", topEndY.toFixed(1));
+          botRayEl.setAttribute("y1", opticY.toFixed(1));
+          botRayEl.setAttribute("x2", hitX.toFixed(1));
+          hitDotEl.setAttribute("cx", hitX.toFixed(1));
+          hitLabelEl.setAttribute("x", Math.min(622, hitX).toFixed(1));
+          hitLabelEl.textContent = \`\${hitM.toFixed(2)} m first hit\`;
+
+          labelH.textContent = \`\${h.toFixed(2)} m\`;
+          outBase.textContent = \`\${h.toFixed(2)} m\`;
+          outTop.textContent = \`\${topH.toFixed(2)} m\`;
+          outHit.textContent = \`\${hitM.toFixed(2)} m\`;
+          outBox.textContent = topH <= 0.75 ? "Fits inside 0.75 m" : "Fold for inspection";
+          outBox.classList.toggle("is-accent", topH <= 0.75);
+        }
+
+        function markOusterPreset(h) {
+          for (const b of oPresets) {
+            b.setAttribute("aria-pressed", Math.abs(Number(b.dataset.h) - h) < 0.005 ? "true" : "false");
+          }
+          syncOusterInd();
+        }
+
+        function animateOuster(targetH) {
+          cancelAnimationFrame(oRaf);
+          markOusterPreset(targetH);
+          if (reducedMotion()) {
+            sliderOuster.value = targetH.toFixed(2);
+            renderOuster(targetH);
+            return;
+          }
+          const startH = curH;
+          const t0 = performance.now();
+          const dur = 280;
+          function step(now) {
+            const p = Math.min(1, (now - t0) / dur);
+            const val = startH + (targetH - startH) * easeO(p);
+            sliderOuster.value = val.toFixed(2);
+            renderOuster(val);
+            if (p < 1) oRaf = requestAnimationFrame(step);
+          }
+          oRaf = requestAnimationFrame(step);
+        }
+
+        sliderOuster.addEventListener("input", () => {
+          cancelAnimationFrame(oRaf);
+          const v = Number(sliderOuster.value);
+          markOusterPreset(v);
+          renderOuster(v);
+        });
+        for (const b of oPresets) {
+          b.addEventListener("click", () => animateOuster(Number(b.dataset.h)));
+        }
+        renderOuster(0.94);
+        requestAnimationFrame(syncOusterInd);
+        window.addEventListener("resize", syncOusterInd, { passive: true });
       }
 
       const sliderPred = document.getElementById("slider-pred");
