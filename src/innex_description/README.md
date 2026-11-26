@@ -2,7 +2,7 @@
 
 URDF description of the rover, written as xacro.
 
-The model has a chassis (with visual extrusion rails, bucket ladder, dump bed and electronics enclosure) and six paddle wheels on continuous joints. Collision geometry uses plain boxes and smooth cylinders to keep Gazebo physics fast. `innex_1.gazebo.xacro` adds the Gazebo friction, drive and joint state plugins.
+The model has an enclosed, rounded-edge chassis (with front bucket-ladder overhang and a raised central Ouster platform) and six paddle wheels on continuous joints. Collision geometry uses plain boxes and smooth cylinders to keep Gazebo physics fast. `innex_1.gazebo.xacro` adds the Gazebo friction, drive and joint state plugins.
 
 ## Frames
 
