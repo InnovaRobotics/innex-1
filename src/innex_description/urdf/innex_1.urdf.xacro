@@ -94,19 +94,37 @@
   </xacro:macro>
 
   <xacro:macro name="rocker_visual" params="side y_sign">
-    <visual name="${side}_rocker_top">
-      <origin xyz="0.16 ${y_sign * (chassis_width / 2 + 0.020)} -0.06" rpy="0 0.34 0"/>
+    <visual name="${side}_rocker_front">
+      <origin xyz="0.337 ${y_sign * (chassis_width / 2 + 0.020)} -0.151" rpy="0 0.672 0"/>
       <geometry>
-        <box size="0.62 0.015 0.045"/>
+        <box size="0.453 0.015 0.042"/>
+      </geometry>
+      <material name="panel"/>
+    </visual>
+    <visual name="${side}_rocker_rear">
+      <origin xyz="-0.060 ${y_sign * (chassis_width / 2 + 0.020)} -0.110" rpy="0 -0.426 0"/>
+      <geometry>
+        <box size="0.484 0.015 0.042"/>
       </geometry>
       <material name="panel"/>
     </visual>
     <visual name="${side}_bogie_bar">
-      <origin xyz="-0.28 ${y_sign * (chassis_width / 2 + 0.035)} -0.22" rpy="0 -0.14 0"/>
+      <origin xyz="-0.281 ${y_sign * (chassis_width / 2 + 0.035)} -0.275"/>
       <geometry>
-        <box size="0.58 0.015 0.040"/>
+        <box size="0.530 0.015 0.038"/>
       </geometry>
       <material name="panel"/>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="ladder_bucket" params="idx s_pos">
+    <xacro:property name="ladder_angle" value="${36 * pi / 180}"/>
+    <visual name="ladder_bucket_${idx}">
+      <origin xyz="${0.37 + s_pos * cos(ladder_angle) + 0.060 * sin(ladder_angle)} 0 ${-0.02 - s_pos * sin(ladder_angle) + 0.060 * cos(ladder_angle)}" rpy="0 ${ladder_angle} 0"/>
+      <geometry>
+        <box size="0.045 ${ladder_width - 0.006} 0.035"/>
+      </geometry>
+      <material name="carbon"/>
     </visual>
   </xacro:macro>
 
@@ -156,10 +174,14 @@
     <visual name="bucket_ladder">
       <origin xyz="0.37 0 -0.02" rpy="0 ${36 * pi / 180} 0"/>
       <geometry>
-        <box size="0.760 ${ladder_width} 0.095"/>
+        <box size="0.760 ${ladder_width} 0.090"/>
       </geometry>
       <material name="panel"/>
     </visual>
+    <xacro:ladder_bucket idx="0" s_pos="-0.24"/>
+    <xacro:ladder_bucket idx="1" s_pos="-0.08"/>
+    <xacro:ladder_bucket idx="2" s_pos="0.08"/>
+    <xacro:ladder_bucket idx="3" s_pos="0.24"/>
     <visual name="front_plate">
       <origin xyz="${chassis_length / 2 + 0.005} 0 ${chassis_height / 2 - rail_size / 2}"/>
       <geometry>
