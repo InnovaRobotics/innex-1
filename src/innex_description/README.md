@@ -1,16 +1,16 @@
 # innex_description
 
-URDF description of the INNEX-1 rover, written as xacro.
+URDF description of the rover, written as xacro.
 
-The model has a chassis and four wheels on continuous joints. `innex_1.gazebo.xacro` adds the Gazebo friction, drive and joint state plugins.
+The model has a chassis (with visual extrusion rails, bucket ladder, dump bed and electronics enclosure) and six paddle wheels on continuous joints. Collision geometry uses plain boxes and smooth cylinders to keep Gazebo physics fast. `innex_1.gazebo.xacro` adds the Gazebo friction, drive and joint state plugins.
 
 ## Frames
 
-`base_link` sits on the ground midway between the wheels. The x axis points forward, the y axis points left and the z axis points up, following REP 103 and REP 105.
+`base_link` sits on the ground directly beneath the middle axle. The x axis points forward, the y axis points left and the z axis points up, following REP 103 and REP 105.
 
 ## Dimensions and masses
 
-The dimensions come from the June 2026 CAD. Measurements of the real rover replace them. The masses are estimates until the rover is weighed.
+The dimensions come from the November 2026 INNEX-2 Master CAD (`0.02`), and the masses come from the Mechanical Team SDR (`58.5 kg` empty including sensors). Measurements of the assembled rover replace them.
 
 ## View the model
 

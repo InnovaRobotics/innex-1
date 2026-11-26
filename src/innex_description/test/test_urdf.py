@@ -42,7 +42,13 @@ def test_root_link_is_base_link(robot):
 
 def test_wheel_joints(robot):
     continuous = [joint for joint in robot.findall('joint') if joint.get('type') == 'continuous']
-    assert {joint.get('name') for joint in continuous} == drive_joint_names(robot)
+    expected = {
+        'front_left_wheel_joint', 'front_right_wheel_joint',
+        'middle_left_wheel_joint', 'middle_right_wheel_joint',
+        'rear_left_wheel_joint', 'rear_right_wheel_joint',
+    }
+    assert {joint.get('name') for joint in continuous} == expected
+    assert drive_joint_names(robot) == expected
 
     links = {link.get('name'): link for link in robot.findall('link')}
     for joint in continuous:
@@ -63,11 +69,15 @@ def test_inertials_are_physical(robot):
     inertials = [(link.get('name'), link.find('inertial')) for link in robot.findall('link')
                  if link.find('inertial') is not None]
     assert inertials
+    total_mass = 0.0
     for name, inertial in inertials:
-        assert float(inertial.find('mass').get('value')) > 0, name
+        mass = float(inertial.find('mass').get('value'))
+        assert mass > 0, name
+        total_mass += mass
         inertia = inertial.find('inertia')
         for axis in ('ixx', 'iyy', 'izz'):
             assert float(inertia.get(axis)) > 0, f'{name} {axis}'
+    assert 50.0 <= total_mass <= 80.0
 
 
 def test_oak_d_pro_cameras(robot):
@@ -117,9 +127,9 @@ def test_ouster_os1_lidar(robot):
     assert sensor_joint.find('parent').get('link') == 'chassis'
     assert sensor_joint.find('child').get('link') == 'os_sensor'
     origin = floats(sensor_joint.find('origin').get('xyz'))
-    assert origin[0] == pytest.approx(0.20)
+    assert origin[0] == pytest.approx(0.485)
     assert origin[1] == pytest.approx(0.0)
-    assert origin[2] == pytest.approx(0.24)  # chassis_height / 2
+    assert origin[2] == pytest.approx(0.265)  # chassis_height / 2
 
     # Origin is at bottom center: visual, collision, and inertial shifted up by half-height
     sensor_link = links['os_sensor']
@@ -128,11 +138,11 @@ def test_ouster_os1_lidar(robot):
         element = sensor_link.find(element_tag)
         assert floats(element.find('origin').get('xyz')) == pytest.approx([0.0, 0.0, sensor_height / 2])
 
-    # Top height from base_link (chassis_joint z 0.48 + mount 0.24 + sensor_height 0.0583)
+    # Top height from base_link (chassis_joint z 0.445 + mount 0.265 + sensor_height 0.0583)
     chassis_joint = joints['chassis_joint']
     chassis_z = floats(chassis_joint.find('origin').get('xyz'))[2]
     total_top_height = chassis_z + origin[2] + sensor_height
-    assert total_top_height == pytest.approx(0.7783, abs=1e-3)
+    assert total_top_height == pytest.approx(0.7683, abs=1e-3)
 
     sensor = robot.find('gazebo[@reference="os_sensor"]/sensor[@name="os_sensor"]')
     assert sensor is not None
