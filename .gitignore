@@ -35,3 +35,6 @@ bags/
 *.gv
 *.pdf
 !docs/**/*.pdf
+
+# Ignore Windows Zone.Identifier files
+*:Zone.Identifier
