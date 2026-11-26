@@ -21,11 +21,15 @@ from helpers import CRATERS, START_ZONE
 
 SPAWN_TIMEOUT = 120
 CLI_TIMEOUT = 60
-WHEEL_JOINTS = ('front_left_wheel_joint', 'front_right_wheel_joint',
-                'rear_left_wheel_joint', 'rear_right_wheel_joint')
+WHEEL_JOINTS = (
+    'front_left_wheel_joint', 'front_right_wheel_joint',
+    'middle_left_wheel_joint', 'middle_right_wheel_joint',
+    'rear_left_wheel_joint', 'rear_right_wheel_joint',
+)
 COMMAND_RATE = 10.0
-WHEELBASE = 0.705
-TRACK = 0.614
+FRONT_AXLE_X = 0.5385
+TRACK = 0.675
+ROCK_4 = (4.55, 1.35)
 OPEN_GROUND = (5.6, 2.3)
 # The rover must start to stop this long after the last command (INX-155).
 STOP_TIMEOUT = 0.5
@@ -65,8 +69,8 @@ def echo_once(env, topic, field):
     return wait_for(attempt, SPAWN_TIMEOUT, f'no message on {topic}').stdout
 
 
-def place_rover(env, x, y):
-    request = f'name: "innex_1", position: {{x: {x}, y: {y}, z: 0.05}}, orientation: {{w: 1}}'
+def place_rover(env, x, y, z=0.05):
+    request = f'name: "innex_1", position: {{x: {x}, y: {y}, z: {z}}}, orientation: {{w: 1}}'
     subprocess.run(['gz', 'service', '-s', '/world/moon_yard/set_pose',
                     '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
                     '--timeout', '5000', '--req', request],
@@ -300,12 +304,21 @@ def test_rover_turns_as_far_as_its_odometry_says(sim):
     assert truth == pytest.approx(odom, rel=0.1)
 
 
-def test_rover_holds_with_a_wheel_on_a_crater_slope(sim):
+def test_rover_holds_with_a_wheel_on_a_slope(sim):
     crater = CRATERS[1]
-    x = crater.x - WHEELBASE / 2
-    y = crater.y + crater.diameter / 4 - TRACK / 2
-    place_rover(sim.env, x, y)
-    time.sleep(8.0)
+    cx = crater.x - FRONT_AXLE_X
+    cy = crater.y + crater.diameter / 4 - TRACK / 2
+    place_rover(sim.env, cx, cy)
+    time.sleep(3.0)
+    bridged = read_pose(sim.env)
+    assert math.hypot(bridged[0] - cx, bridged[1] - cy) < 0.02
+
+    rx = ROCK_4[0]
+    ry = ROCK_4[1] + 0.10 + TRACK / 2
+    place_rover(sim.env, rx, ry, z=0.18)
+    time.sleep(2.0)
+    settled = read_pose(sim.env)
+    assert math.hypot(settled[3], settled[4]) > 0.05, 'no wheel is on the slope'
+    time.sleep(6.0)
     end = read_pose(sim.env)
-    assert math.hypot(end[3], end[4]) > 0.02, 'no wheel is on the slope'
-    assert math.hypot(end[0] - x, end[1] - y) < 0.02
+    assert math.hypot(end[0] - settled[0], end[1] - settled[1]) < 0.01
