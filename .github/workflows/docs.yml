@@ -15,12 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Build and deploy documentation
+  build:
+    name: Build documentation
     runs-on: ubuntu-24.04
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,5 +29,14 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
