@@ -1,28 +1,34 @@
 const SANS = "'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif";
 
 export const GLOSSARY_VISUALS = {
-  apriltag: `<svg viewBox="0 0 340 108" aria-hidden="true">
-    <rect width="340" height="108" fill="#0b0d10"/>
-    <!-- 6x6 fiducial tag -->
-    <g transform="translate(44, 18)">
-      <rect width="72" height="72" fill="#eceef2" rx="1.5"/>
-      <rect x="8" y="8" width="56" height="56" fill="#0b0d10"/>
-      <rect x="17" y="17" width="12" height="12" fill="#eceef2"/>
-      <rect x="41" y="17" width="12" height="12" fill="#eceef2"/>
-      <rect x="29" y="29" width="12" height="12" fill="#eceef2"/>
-      <rect x="17" y="41" width="24" height="12" fill="#eceef2"/>
-      <!-- 3D pose triad at tag centre -->
-      <line x1="36" y1="36" x2="64" y2="36" stroke="#b2b8c2" stroke-width="1.5"/>
-      <line x1="36" y1="36" x2="36" y2="10" stroke="#b2b8c2" stroke-width="1.5"/>
-      <line x1="36" y1="36" x2="88" y2="54" stroke="#4f7bd9" stroke-width="1.8"/>
-      <circle cx="36" cy="36" r="2.8" fill="#4f7bd9"/>
-    </g>
-    <!-- Camera frustum on right -->
-    <line x1="132" y1="72" x2="226" y2="54" stroke="#4f7bd9" stroke-width="1.3" stroke-dasharray="4 3"/>
-    <polygon points="226,54 252,38 252,70" fill="rgba(79,123,217,0.14)" stroke="#4f7bd9" stroke-width="1.4"/>
-    <text x="262" y="51" fill="#eceef2" font-family="${SANS}" font-size="11.5" font-weight="500">Camera</text>
-    <text x="262" y="66" fill="#8e95a2" font-family="${SANS}" font-size="10.5">6-DoF pose</text>
-  </svg>`,
+  apriltag: {
+    type: "img",
+    src: "images/apriltag.png",
+    alt: "AprilTag 36h11 visual fiducial marker",
+    fit: "contain",
+    pad: true,
+  },
+
+  "bldc-motor": {
+    type: "img",
+    src: "images/bldc.jpg",
+    alt: "Brushless DC motor stator windings",
+    fit: "cover",
+  },
+
+  "e-stop": {
+    type: "img",
+    src: "images/estop.jpg",
+    alt: "Latching red mushroom emergency stop button",
+    fit: "cover",
+  },
+
+  "point-cloud": {
+    type: "img",
+    src: "images/point-cloud.jpg",
+    alt: "3D LiDAR point cloud captured by an Ouster OS1",
+    fit: "cover",
+  },
 
   costmap: `<svg viewBox="0 0 340 108" aria-hidden="true">
     <rect width="340" height="108" fill="#0b0d10"/>
@@ -145,20 +151,12 @@ export const GLOSSARY_VISUALS = {
     <text x="242" y="84" fill="#8e95a2" font-family="${SANS}" font-size="11">Roll</text>
   </svg>`,
 
-  lidar: `<svg viewBox="0 0 340 108" aria-hidden="true">
-    <rect width="340" height="108" fill="#0b0d10"/>
-    <line x1="24" y1="88" x2="316" y2="88" stroke="#eceef2" stroke-width="1.5"/>
-    <!-- Sensor tower on rover -->
-    <rect x="44" y="56" width="44" height="26" rx="1.5" fill="#14171c" stroke="#b2b8c2" stroke-width="1.2"/>
-    <rect x="60" y="34" width="14" height="22" fill="#14171c" stroke="#eceef2" stroke-width="1.3"/>
-    <!-- +/- 21.2 deg laser fan -->
-    <polygon points="74,42 296,16 296,88 184,88" fill="rgba(79,123,217,0.11)"/>
-    <line x1="74" y1="42" x2="296" y2="16" stroke="#4f7bd9" stroke-width="1.2" stroke-dasharray="4 3"/>
-    <line x1="74" y1="42" x2="296" y2="54" stroke="#4f7bd9" stroke-width="1.2" opacity="0.7"/>
-    <line x1="74" y1="42" x2="184" y2="88" stroke="#4f7bd9" stroke-width="1.5"/>
-    <text x="128" y="80" text-anchor="middle" fill="#8e95a2" font-family="${SANS}" font-size="10.5">Near dead zone</text>
-    <text x="248" y="42" fill="#7098ec" font-family="${SANS}" font-size="11" font-weight="500">42.4° vertical fan</text>
-  </svg>`,
+  lidar: {
+    type: "img",
+    src: "images/ouster-os1.png",
+    alt: "Ouster OS1-128 LiDAR sensor",
+    fit: "cover",
+  },
 
   pose: `<svg viewBox="0 0 340 108" aria-hidden="true">
     <rect width="340" height="108" fill="#0b0d10"/>

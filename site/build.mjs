@@ -24,6 +24,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const DIST_DIR = path.join(__dirname, "dist");
 const FONTS_DIR = path.join(__dirname, "fonts");
+const IMAGES_DIR = path.join(__dirname, "images");
 
 const EXCLUDED_DOCS = new Set(["docs/sdr.md", "docs/software-sdr.md"]);
 
@@ -673,6 +674,14 @@ function parseMarkdown(md, currentPage, pageMap, glossaryCatalogue) {
     const paraText = paraLines.join(" ");
     htmlParts.push(`<p>${formatInline(paraText, currentPage, pageMap, glossaryCtx)}</p>`);
 
+    function renderPhotoFigure(imgRel, alt, caption, variant = "") {
+      const src = relativeHref(currentPage.outRel, imgRel);
+      const cls = variant ? ` ${variant}` : "";
+      return `<figure class="photo-figure"><div class="photo-frame${cls}"><img src="${src}" alt="${escapeHtml(
+        alt
+      )}" loading="lazy"/></div><figcaption class="figure-caption">${caption}</figcaption></figure>`;
+    }
+
     if (
       currentPage.repoRel === "docs/system/localisation.md" &&
       currentH3 === "lidar-odometry" &&
@@ -681,11 +690,91 @@ function parseMarkdown(md, currentPage, pageMap, glossaryCatalogue) {
       htmlParts.push(renderIcpWallDiagram());
     }
     if (
+      currentPage.repoRel === "docs/system/localisation.md" &&
+      currentH3 === "arena-beacon" &&
+      paraText.includes("AprilTag detector")
+    ) {
+      htmlParts.push(
+        renderPhotoFigure(
+          "images/apriltag.png",
+          "AprilTag 36h11 marker ID 0",
+          "Real <code>tag36h11</code> AprilTag (ID 0) from <code>innex_sim</code>. Knowing the physical width of the printed square turns its apparent pixel size and tilt into a 3D pose relative to the camera.",
+          "is-tag"
+        )
+      );
+    }
+    if (
+      currentPage.repoRel === "docs/system/sensors.md" &&
+      currentH2Section?.id === "stereo-depth-on-sand" &&
+      paraText.includes("active stereo")
+    ) {
+      htmlParts.push(
+        renderPhotoFigure(
+          "images/oak-d-pro.png",
+          "Luxonis OAK-D Pro active stereo camera",
+          "Luxonis OAK-D Pro front face: left and right monochrome stereo lenses on the outer edges, centre colour camera, and the infrared dot projector and flood LED between them. Image: Luxonis.",
+          "is-product"
+        )
+      );
+    }
+    if (
+      currentPage.repoRel === "docs/system/sensors.md" &&
+      currentH2Section?.id === "lidar-field-of-view" &&
+      paraText.includes("Rev 7")
+    ) {
+      htmlParts.push(
+        renderPhotoFigure(
+          "images/ouster-os1.png",
+          "Ouster OS1-128 Rev 7 LiDAR sensor",
+          "Ouster OS1-128 3D spinning LiDAR sensor. Its 128 vertical laser beams sweep 360 degrees horizontally across a 42.4-degree vertical field of view. Image: Ouster."
+        )
+      );
+    }
+    if (
       currentPage.repoRel === "docs/system/sensors.md" &&
       currentH2Section?.id === "lidar-field-of-view" &&
       paraText.includes("0.75 m")
     ) {
       htmlParts.push(renderInteractiveOusterFigure());
+    }
+    if (
+      currentPage.repoRel === "docs/system/perception.md" &&
+      !currentH2Section &&
+      paraText.includes("moving camera frame")
+    ) {
+      htmlParts.push(
+        renderPhotoFigure(
+          "images/point-cloud.jpg",
+          "3D LiDAR point cloud captured by an Ouster OS1",
+          "Example 3D point cloud captured by an Ouster OS1 LiDAR, coloured by surface reflectivity. Photo: Daniel L. Lu (CC BY 4.0)."
+        )
+      );
+    }
+    if (
+      currentPage.repoRel === "docs/jetson.md" &&
+      !currentH2Section &&
+      paraText.includes("JetPack 7.2.1")
+    ) {
+      htmlParts.push(
+        renderPhotoFigure(
+          "images/jetson-orin-nano.jpg",
+          "NVIDIA Jetson Orin Nano Super Developer Kit",
+          "NVIDIA Jetson Orin Nano Super Developer Kit, the rover's main onboard compute module running ROS 2 Jazzy in 25 W mode. Image: NVIDIA."
+        )
+      );
+    }
+    if (
+      currentPage.repoRel === "firmware/teensy_drive/README.md" &&
+      !currentH2Section &&
+      paraText.includes("LED_BUILTIN")
+    ) {
+      htmlParts.push(
+        renderPhotoFigure(
+          "images/teensy41.jpg",
+          "PJRC Teensy 4.1 microcontroller board, top and bottom views",
+          "PJRC Teensy 4.1 board (top and bottom views), showing the USB micro-B host port, IMXRT1062 processor and 3.3 V I/O pins. Photo: SpencerWF (CC0)."
+        )
+      );
     }
   }
 
@@ -785,10 +874,21 @@ function writeGlossaryClientScript(entries) {
   let closeTimer = 0;
   let lastClosedAt = 0;
 
+  const rootPrefix = document.documentElement.dataset.root || ".";
+  function resolveAsset(relPath) {
+    return rootPrefix === "." ? \`./\${relPath}\` : \`\${rootPrefix}/\${relPath}\`;
+  }
+
   function renderCardContent(entry, glossaryHref) {
-    const visualBlock = entry.visual
-      ? \`<div class="gp-visual">\${entry.visual}</div>\`
-      : "";
+    let visualBlock = "";
+    if (entry.visual) {
+      if (typeof entry.visual === "string") {
+        visualBlock = \`<div class="gp-visual">\${entry.visual}</div>\`;
+      } else if (entry.visual.type === "img") {
+        const cls = entry.visual.fit === "contain" ? " is-contain" : "";
+        visualBlock = \`<div class="gp-visual\${cls}"><img src="\${resolveAsset(entry.visual.src)}" alt="\${entry.visual.alt}"/></div>\`;
+      }
+    }
     const subtitleBlock = entry.subtitle
       ? \`<p class="gp-subtitle">\${entry.subtitle}</p>\`
       : "";
@@ -1183,6 +1283,13 @@ function copyStaticAssets() {
   if (fs.existsSync(FONTS_DIR)) {
     for (const f of fs.readdirSync(FONTS_DIR)) {
       fs.copyFileSync(path.join(FONTS_DIR, f), path.join(distFonts, f));
+    }
+  }
+  const distImages = path.join(DIST_DIR, "images");
+  fs.mkdirSync(distImages, { recursive: true });
+  if (fs.existsSync(IMAGES_DIR)) {
+    for (const f of fs.readdirSync(IMAGES_DIR)) {
+      fs.copyFileSync(path.join(IMAGES_DIR, f), path.join(distImages, f));
     }
   }
 }
@@ -1677,6 +1784,10 @@ if (process.argv.includes("--serve")) {
     ".svg": "image/svg+xml",
     ".js": "text/javascript; charset=utf-8",
     ".woff2": "font/woff2",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
   };
   const server = http.createServer((req, res) => {
     const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
