@@ -16,15 +16,15 @@
        default="0.0"
        description="Rover heading in radians. 0 faces east, towards the excavation zone." />
 
-  <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py" if="$(var gui)">
-    <arg name="gz_args" value="-r $(find-pkg-share innex_sim)/worlds/moon_yard.sdf" />
-    <arg name="on_exit_shutdown" value="true" />
-  </include>
+  <executable cmd="gz sim -r $(find-pkg-share innex_sim)/worlds/moon_yard.sdf"
+              output="screen"
+              on_exit="shutdown"
+              if="$(var gui)" />
 
-  <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py" unless="$(var gui)">
-    <arg name="gz_args" value="-r -s $(find-pkg-share innex_sim)/worlds/moon_yard.sdf" />
-    <arg name="on_exit_shutdown" value="true" />
-  </include>
+  <executable cmd="gz sim -r -s $(find-pkg-share innex_sim)/worlds/moon_yard.sdf"
+              output="screen"
+              on_exit="shutdown"
+              unless="$(var gui)" />
 
   <node pkg="innex_sim" exec="cmd_vel_watchdog" output="screen" on_exit="shutdown" />
 
