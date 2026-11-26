@@ -53,11 +53,11 @@ Follow the guide for your computer:
 - Windows: [Set up Windows with WSL](docs/setup-windows.md)
 - Ubuntu 24.04: [Install ROS 2 on Ubuntu](docs/setup-ubuntu.md)
 
-On a Mac or a Windows PC, you should install Ubuntu first. Then continue with the Ubuntu guide inside the virtual machine or WSL.
+On a Mac or a Windows PC, install Ubuntu first. Then continue with the Ubuntu guide inside the virtual machine or WSL.
 
 ## Check your setup
 
-The Ubuntu guide includes three checks. You should see:
+The Ubuntu guide includes three checks:
 
 - The listener prints the talker's messages.
 - Gazebo shows shapes.
@@ -114,6 +114,12 @@ Run these steps in your Ubuntu environment. On a Mac, use an SSH session to the 
    Gazebo opens with the arena. The rover is in the start zone.
 
    From an SSH session, add `gui:=false`. An SSH session has no display. In a second terminal, run `ros2 topic list`. If the list shows only `/parameter_events` and `/rosout`, wait a few seconds and run the command again.
+
+7. Stream simulated camera video to Foxglove (optional). Stop the simulation with Ctrl+C, then relaunch with `video:=true` (add `lidar:=false` on a Mac VM without GPU raycasting to keep frame rates smooth):
+   ```bash
+   ros2 launch innex_sim moon_yard.launch.xml video:=true lidar:=false
+   ```
+   Connect Foxglove to `ws://localhost:8765` (or `ws://IP_ADDRESS:8765` from macOS) to view `/oak_front/video` and `/oak_rear/video`. With a wired game controller plugged in, run `ros2 launch innex_teleop joy.launch.xml` in a second terminal and hold LB/L1 to drive (see [`innex_teleop`](src/innex_teleop/README.md)).
 
 When the simulation runs, read [System design](docs/system-design.md) to see how the parts fit together.
 

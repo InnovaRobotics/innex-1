@@ -90,7 +90,7 @@ The AprilTag beacon position and height are not confirmed with the organisers.
 
 ## Walls
 
-The walls are simulation geometry only. The rules forbid using them for mapping, navigation or collision avoidance.
+Simulation tests use the arena's 7.9 m by 4.4 m dimensions to spawn rocks and check bounds, while rover autonomy code must never hard-code arena dimensions. Under the provisional 4 November 2026 organiser clarification in [Competition rules](../../docs/rules.md#organiser-clarifications-provisional), sensing the walls live as obstacles is expected to be allowed in the final 2027 rulebook.
 
 ## Regenerate the meshes
 

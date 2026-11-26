@@ -35,3 +35,4 @@ bags/
 *.gv
 *.pdf
 !docs/**/*.pdf
+site/dist/

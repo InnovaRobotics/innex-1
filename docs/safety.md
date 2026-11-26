@@ -21,7 +21,8 @@ Check that:
 
 ## Flashing
 
-Take precautions when you flash the Jetson or the Teensy.
+1. Flash the Jetson or the Teensy only when someone asks and a second person is present.
+2. Before you flash the Teensy, put the rover on blocks with its wheels off the ground, or disconnect battery power from all motor controllers. Uninitialised pins during a reset do not keep motor controllers off.
 
 ## If something goes wrong
 
