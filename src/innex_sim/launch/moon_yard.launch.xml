@@ -16,12 +16,12 @@
        default="0.0"
        description="Rover heading in radians. 0 faces east, towards the excavation zone." />
 
-  <executable cmd="gz sim -r $(find-pkg-share innex_sim)/worlds/moon_yard.sdf"
+  <executable cmd="gz sim --force-version 8 -r $(find-pkg-share innex_sim)/worlds/moon_yard.sdf"
               output="screen"
               on_exit="shutdown"
               if="$(var gui)" />
 
-  <executable cmd="gz sim -r -s $(find-pkg-share innex_sim)/worlds/moon_yard.sdf"
+  <executable cmd="gz sim --force-version 8 -r -s $(find-pkg-share innex_sim)/worlds/moon_yard.sdf"
               output="screen"
               on_exit="shutdown"
               unless="$(var gui)" />
