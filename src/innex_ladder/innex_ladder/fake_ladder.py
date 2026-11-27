@@ -1,108 +1,83 @@
-"""A pretend bucket ladder that stands in for the real motors."""
+"""A pretend motor that stands in for the real ladder motors."""
 
-from innex_ladder.ladder_rules import can_run_chain, ChainState, LadderState
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import Float32, String
 
-COMMAND_TIMEOUT_S = 0.25
+DRIVE_TIMEOUT_S = 0.25
 UPDATE_PERIOD_S = 0.1
-VALID_COMMANDS = ('lower', 'raise', 'chain')
 
 
 class FakeLadder(Node):
-    """A fake ladder node for testing without hardware."""
+    """Moves a pretend position when told to. It has no rules."""
 
     def __init__(self):
-        """Set up the parameter, publishers, subscriber and timer."""
+        """Set up the parameter, topics and timer."""
         super().__init__('fake_ladder')
 
         self.declare_parameter('ladder_travel_time_s', 10.0)
         travel_time = self.get_parameter('ladder_travel_time_s').value
         self.travel_time = max(travel_time, 0.1)
 
+        now = self.get_clock().now()
         self.position = 0.0
-        self.command = None
-        self.command_time = self.get_clock().now()
-        self.last_update = self.get_clock().now()
-        self.last_ladder = None
-        self.last_chain = None
+        self.ladder_drive = 'stop'
+        self.ladder_drive_time = now
+        self.chain_drive = 'stop'
+        self.chain_drive_time = now
+        self.last_update = now
+        self.last_chain_running = False
 
-        self.command_subscription = self.create_subscription(
-            String,
-            '/ladder/command',
-            self.command_callback,
-            10)
-        self.ladder_publisher = self.create_publisher(
-            String, '/ladder/state', 10)
-        self.chain_publisher = self.create_publisher(
-            String, '/chain/state', 10)
+        self.ladder_drive_subscription = self.create_subscription(
+            String, '/ladder/drive', self.ladder_drive_callback, 10)
+        self.chain_drive_subscription = self.create_subscription(
+            String, '/chain/drive', self.chain_drive_callback, 10)
+        self.position_publisher = self.create_publisher(
+            Float32, '/ladder/position', 10)
+
         self.timer = self.create_timer(UPDATE_PERIOD_S, self.update)
-
         self.get_logger().info('Fake Ladder has started')
 
-    def command_callback(self, msg):
-        """Remember the latest command and when it arrived."""
-        if msg.data not in VALID_COMMANDS:
-            self.get_logger().warn(f'Unknown command ignored: {msg.data}')
-            return
-        self.command = msg.data
-        self.command_time = self.get_clock().now()
+    def ladder_drive_callback(self, msg):
+        """Remember the latest ladder drive word and when it arrived."""
+        self.ladder_drive = msg.data
+        self.ladder_drive_time = self.get_clock().now()
 
-    def active_command(self, now):
-        """Return the current command, or None if it has timed out."""
-        if self.command is None:
-            return None
-        age = (now - self.command_time).nanoseconds / 1e9
-        if age > COMMAND_TIMEOUT_S:
-            return None
-        return self.command
+    def chain_drive_callback(self, msg):
+        """Remember the latest chain drive word and when it arrived."""
+        self.chain_drive = msg.data
+        self.chain_drive_time = self.get_clock().now()
+
+    def fresh(self, then, now):
+        """Return True if a message from time 'then' is still recent."""
+        return (now - then).nanoseconds / 1e9 <= DRIVE_TIMEOUT_S
 
     def update(self):
-        """Move the ladder, apply the chain rule and publish both states."""
+        """Move the pretend ladder and report its position."""
         now = self.get_clock().now()
         dt = (now - self.last_update).nanoseconds / 1e9
         self.last_update = now
 
-        command = self.active_command(now)
+        ladder_drive = 'stop'
+        if self.fresh(self.ladder_drive_time, now):
+            ladder_drive = self.ladder_drive
 
         direction = 0
-        if command == 'lower' and self.position < 1.0:
+        if ladder_drive == 'lower':
             direction = 1
-        elif command == 'raise' and self.position > 0.0:
+        elif ladder_drive == 'raise':
             direction = -1
 
         self.position += direction * dt / self.travel_time
         self.position = max(0.0, min(1.0, self.position))
+        self.position_publisher.publish(Float32(data=self.position))
 
-        if direction == 1:
-            ladder = LadderState.LOWERING
-        elif direction == -1:
-            ladder = LadderState.RAISING
-        elif self.position >= 1.0:
-            ladder = LadderState.IN_POSITION
-        elif self.position <= 0.0:
-            ladder = LadderState.UP
-        else:
-            ladder = LadderState.STOPPED
-
-        chain = ChainState.STOPPED
-        if command == 'chain':
-            if can_run_chain(ladder):
-                chain = ChainState.TURNING
-            else:
-                self.get_logger().warn(
-                    'Chain command ignored: ladder is not in position.',
-                    throttle_duration_sec=1.0)
-
-        self.ladder_publisher.publish(String(data=ladder.value))
-        self.chain_publisher.publish(String(data=chain.value))
-
-        if ladder != self.last_ladder or chain != self.last_chain:
+        chain_running = (self.chain_drive == 'run'
+                         and self.fresh(self.chain_drive_time, now))
+        if chain_running != self.last_chain_running:
             self.get_logger().info(
-                f'ladder: {ladder.value}, chain: {chain.value}')
-            self.last_ladder = ladder
-            self.last_chain = chain
+                f'pretend chain: {"running" if chain_running else "stopped"}')
+            self.last_chain_running = chain_running
 
 
 def main(args=None):

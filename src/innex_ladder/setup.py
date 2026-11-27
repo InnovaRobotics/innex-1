@@ -34,6 +34,7 @@ setup(
         'console_scripts': [
             'ladder_joy = innex_ladder.ladder_joy:main',
             'fake_ladder = innex_ladder.fake_ladder:main',
+            'ladder_controller = innex_ladder.ladder_controller:main',
         ],
     },
 )
