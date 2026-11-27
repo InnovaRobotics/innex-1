@@ -12,6 +12,11 @@ class LadderJoy(Node):
     def __init__(self):
         super().__init__('ladder_joy')
 
+        self.declare_parameter('rb_button', 10)
+        self.declare_parameter('a_button', 0)
+        self.declare_parameter('y_button', 3)
+        self.declare_parameter('chain_button', 14)
+
         self.command_publisher = self.create_publisher(
             String,
             '/ladder/command',
@@ -44,29 +49,32 @@ class LadderJoy(Node):
 
     def joy_callback(self, msg):
         buttons = msg.buttons
+        rb_index = self.get_parameter('rb_button').value
+        a_index = self.get_parameter('a_button').value
+        y_index = self.get_parameter('y_button').value
+        chain_index = self.get_parameter('chain_button').value
 
-        if len(buttons) <= 10:
+        if len(buttons) <= max(rb_index, a_index, y_index, chain_index):
             return
 
-        lb = buttons[9]
-        a = buttons[0]
-        y = buttons[3]
-        rb = buttons[10]
+        rb = buttons[rb_index]
+        a = buttons[a_index]
+        y = buttons[y_index]
+        chain = buttons[chain_index]
 
         command = None
 
-        if lb:
+        if rb:
             if a:
                 command = 'lower'
             elif y:
                 command = 'raise'
-            elif rb:
+            elif chain:
                 command = 'chain'
 
         if command is not None:
             command_msg = String()
             command_msg.data = command
-
             self.command_publisher.publish(command_msg)
 
     def ladder_callback(self, msg):

@@ -1,0 +1,7 @@
+
+ladder_joy:
+  ros__parameters:
+    rb_button: 10
+    a_button: 0
+    y_button: 3
+    chain_button: 14
